@@ -25,7 +25,7 @@ asc review submit … --confirm             # 提交
 | 元数据（zh-Hans 主语言 + en-US） | ✅ `metadata/`，`asc metadata validate` 0 错误 |
 | 截图 4 张 2880×1800 | ✅ `docs/app-store/screenshots/zh-Hans/` |
 | 支持页 / 隐私页 | ✅ 已写进 `alexsignal-site`，**待你部署** |
-| Apple Developer 账号登录 Xcode / asc | 👤 未登录 |
+| Apple Developer 账号登录 Xcode / asc | Xcode ✅ `rowoverz@gmail.com` / `8YVWX4U62Y`；asc 👤 未登录 |
 | App Store Connect 里的 App 记录 | 👤 未创建 |
 | Apple Distribution 证书 | 👤 未申请（Xcode 自动签名会代办） |
 
@@ -38,7 +38,7 @@ asc review submit … --confirm             # 提交
 | 2.4.5 Mac 应用要求：沙盒、无私有 API | 通过 | `codesign -d --entitlements` 只有 sandbox / user-selected / bookmarks |
 | 4.2 最小功能 | 通过 | 原生工具，非套壳 |
 | 2.3.7 / 5.2 关键词里的第三方商标 | 已修 | 关键词字段去掉了 `claude`、`codex`；描述里作为「兼容 Cursor、Claude Code、Codex」的互操作说明保留，这是允许的 |
-| 5.1.1 隐私政策 URL | **待部署** | `https://alexsignal.com/skill-hub/privacy` |
+| 5.1.1 隐私政策 URL | ✅ | `https://ai-skills-hub.zoshh.workers.dev/privacy` |
 | 5.1.2 隐私标签 | 选「不收集数据」 | 无网络、无 SDK |
 | 隐私清单 | 通过 | UserDefaults CA92.1、文件时间戳 DDA9.1 + 3B52.1 |
 | 出口合规 | 免填 | `ITSAppUsesNonExemptEncryption = false` |
@@ -50,13 +50,13 @@ asc review submit … --confirm             # 提交
 
 ### 2a. Xcode 登录（用于签名和归档）
 
-Xcode › Settings › Accounts › 「+」› Apple ID，登录 `zoshh@outlook.com`（Team ID `6GBW9525BT`）。登录后 Xcode 会在归档时自动申请 Apple Distribution 和 Mac Installer Distribution 证书、生成 Mac App Store 描述文件。**不需要手动在 developer.apple.com 点任何证书。**
+Xcode 已登录 `rowoverz@gmail.com`（Team ID `8YVWX4U62Y`）。归档时 Xcode 会自动申请 Apple Distribution 和 Mac Installer Distribution 证书、生成 Mac App Store 描述文件。**不需要手动在 developer.apple.com 点任何证书。**
 
 ### 2b. asc 登录（用于命令行创建 App、传元数据、传截图）
 
 ```bash
 # 网页会话（会提示输入密码和两步验证码）
-asc web auth login --apple-id zoshh@outlook.com
+asc web auth login --apple-id rowoverz@gmail.com
 
 # 用这个会话生成一把团队 API key（只需一次；.p8 会保存在 ./keys，不要提交进 git）
 mkdir -p keys && asc web api-keys create --name "skill-hub-cli" --role ADMIN --output-dir ./keys --output json
@@ -75,7 +75,7 @@ asc bundle-ids create --identifier dev.lucy.SkillHub --name "Skill Hub" --platfo
 
 # 创建 App（网页会话），主语言简体中文
 asc web apps create --name "Skill Hub" --bundle-id dev.lucy.SkillHub --sku SKILLHUB-MAC-001 \
-  --platform MAC_OS --primary-locale zh-Hans --apple-id zoshh@outlook.com
+  --platform MAC_OS --primary-locale zh-Hans --apple-id rowoverz@gmail.com
 
 # 记下 APP_ID
 asc apps list --bundle-id dev.lucy.SkillHub --output table
@@ -136,14 +136,14 @@ swift scripts/compose-screenshot.swift docs/app-store/screenshots/raw/04-prompt-
 >
 > No account, no in-app purchases.
 
-## 6. 👤 部署支持页和隐私页
+## 6. 支持页和隐私页
 
-在 `~/projects/alexsignal-site` 已新增两页（类型检查通过）：
+独立 Worker，源码在本仓库 `site/`，不挂在其他网站上：
 
-- `app/skill-hub/page.tsx` → `https://alexsignal.com/skill-hub`（支持页，也作为 marketing URL）
-- `app/skill-hub/privacy/page.tsx` → `https://alexsignal.com/skill-hub/privacy`
+- https://ai-skills-hub.zoshh.workers.dev
+- https://ai-skills-hub.zoshh.workers.dev/privacy
 
-按你平时的方式提交并部署即可。**提交审核前请在浏览器里确认两个 URL 能打开**，5.1.1 会因为隐私页 404 直接被拒。
+更新页面后：`cd site && wrangler deploy`（或走 Cloudflare API）。
 
 ## 7. 归档并上传构建
 
@@ -185,8 +185,8 @@ asc submissions list --app "$APP_ID" --output table   # 之后用这条看状态
 |---|---|---|
 | 版权 | `2026 周诗豪` | 取自证书主体，可改 |
 | 价格 | 免费 | 建议 v1 免费积累评分，付费另开新版本 |
-| 支持邮箱 | `hello@alexsignal.com` | 页面里写的，确认能收信 |
-| 隐私 / 支持 URL | alexsignal.com/skill-hub(/privacy) | 部署后确认可访问 |
+| 支持邮箱 | `rowoverz@gmail.com` | 支持页和隐私页上的联系邮箱 |
+| 隐私 / 支持 URL | `https://ai-skills-hub.zoshh.workers.dev` | 已上线 |
 | SKU | `SKILLHUB-MAC-001` | 任意唯一字符串 |
 | 主语言 | zh-Hans | 界面目前只有中文 |
 

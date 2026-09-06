@@ -8,6 +8,7 @@ xcuserdata/
 .swiftpm/
 .idea/
 
-# App Store Connect API keys and export artifacts
+# App Store Connect API keys, local reports, and export artifacts
 keys/
 *.p8
+.asc/
