@@ -1,0 +1,173 @@
+# Skill Hub — Mac App Store 上架手册
+
+按「审核合规 → 元数据/ASO → 截图 → 上传提交 → 多语言」的顺序。已经替你做完的部分打了 ✅，需要你本人操作（涉及 Apple 账号登录、2FA、付款）的部分标了 👤。
+
+## 0. 现状
+
+| 项 | 状态 |
+|---|---|
+| App Sandbox + Hardened Runtime + 正式签名 | ✅ `project.yml`，Debug 构建已验证 |
+| 应用图标、隐私清单、`ITSAppUsesNonExemptEncryption=NO` | ✅ |
+| 元数据（zh-Hans 主语言 + en-US） | ✅ `metadata/`，`asc metadata validate` 0 错误 |
+| 截图 4 张 2880×1800 | ✅ `docs/app-store/screenshots/zh-Hans/` |
+| 支持页 / 隐私页 | ✅ 已写进 `alexsignal-site`，**待你部署** |
+| Apple Developer 账号登录 Xcode / asc | 👤 未登录 |
+| App Store Connect 里的 App 记录 | 👤 未创建 |
+| Apple Distribution 证书 | 👤 未申请（Xcode 自动签名会代办） |
+
+## 1. 审核合规审查（对照 `app-store-review` Skill）
+
+| 指南 | 结论 | 证据 |
+|---|---|---|
+| 2.1 完整性 | 通过，但审核员会看到「授权主目录」引导页 | 必须在审核备注里说明（见 §5） |
+| 2.3 元数据准确 | 通过 | 描述/截图均来自当前构建 |
+| 2.4.5 Mac 应用要求：沙盒、无私有 API | 通过 | `codesign -d --entitlements` 只有 sandbox / user-selected / bookmarks |
+| 4.2 最小功能 | 通过 | 原生工具，非套壳 |
+| 5.1.1 隐私政策 URL | **待部署** | `https://alexsignal.com/skill-hub/privacy` |
+| 5.1.2 隐私标签 | 选「不收集数据」 | 无网络、无 SDK |
+| 隐私清单 | 通过 | UserDefaults CA92.1、文件时间戳 DDA9.1 + 3B52.1 |
+| 出口合规 | 免填 | `ITSAppUsesNonExemptEncryption = false` |
+| 年龄分级 | 4+ | 问卷全选「无」 |
+
+**唯一真实风险**：审核员不理解为什么一个 skill 管理器要读主目录。审核备注要写清楚（§5 已写好），并且引导页本身已经解释了要读哪几个隐藏文件夹。
+
+## 2. 👤 登录账号（一次性，约 10 分钟）
+
+### 2a. Xcode 登录（用于签名和归档）
+
+Xcode › Settings › Accounts › 「+」› Apple ID，登录 `zoshh@outlook.com`（Team ID `6GBW9525BT`）。登录后 Xcode 会在归档时自动申请 Apple Distribution 和 Mac Installer Distribution 证书、生成 Mac App Store 描述文件。**不需要手动在 developer.apple.com 点任何证书。**
+
+### 2b. asc 登录（用于命令行创建 App、传元数据、传截图）
+
+```bash
+# 网页会话（会提示输入密码和两步验证码）
+asc web auth login --apple-id zoshh@outlook.com
+
+# 用这个会话生成一把团队 API key（只需一次；.p8 会保存在 ./keys，不要提交进 git）
+mkdir -p keys && asc web api-keys create --name "skill-hub-cli" --role ADMIN --output-dir ./keys --output json
+# 输出里有 keyId 和 issuerId，填进下一条：
+asc auth login --name skillhub --key-id "<KEY_ID>" --issuer-id "<ISSUER_ID>" --private-key ./keys/AuthKey_<KEY_ID>.p8
+asc auth status
+```
+
+`keys/` 已加进 `.gitignore`。
+
+## 3. 👤 创建 App 记录
+
+```bash
+# 注册 Bundle ID（macOS 平台）
+asc bundle-ids create --identifier dev.lucy.SkillHub --name "Skill Hub" --platform MAC_OS
+
+# 创建 App（网页会话），主语言简体中文
+asc web apps create --name "Skill Hub" --bundle-id dev.lucy.SkillHub --sku SKILLHUB-MAC-001 \
+  --platform MAC_OS --primary-locale zh-Hans --apple-id zoshh@outlook.com
+
+# 记下 APP_ID
+asc apps list --bundle-id dev.lucy.SkillHub --output table
+```
+
+如果名字 "Skill Hub" 被占用，备选：`Skill Hub – AI Skills Manager`（名称限 30 字符）。
+
+## 4. 推送元数据和截图（我可以代跑，你只需把 APP_ID 给我）
+
+```bash
+export APP_ID=<上一步的 ID>
+
+# 版本 1.0.0 已由第一次上传构建自动创建；没有的话：
+asc versions create --app "$APP_ID" --version 1.0.0 --platform MAC_OS
+
+# 元数据：先 dry-run 看 diff，再应用
+asc metadata push --app "$APP_ID" --version 1.0.0 --platform MAC_OS --dir ./metadata --dry-run --output table
+asc metadata push --app "$APP_ID" --version 1.0.0 --platform MAC_OS --dir ./metadata
+
+# 版权（不是本地化字段）
+asc versions update --version-id "$(asc versions list --app "$APP_ID" --platform MAC_OS --output json | jq -r '.data[0].id')" --copyright "2026 周诗豪"
+
+# 截图（Mac 的展示类型是 APP_DESKTOP）
+asc screenshots upload --app "$APP_ID" --version 1.0.0 --path ./docs/app-store/screenshots/zh-Hans --device-type APP_DESKTOP --dry-run
+asc screenshots upload --app "$APP_ID" --version 1.0.0 --path ./docs/app-store/screenshots/zh-Hans --device-type APP_DESKTOP
+```
+
+网页里还要手动点三处（API 不支持）：**定价**（建议先免费）、**年龄分级问卷**（全选无）、**App 隐私 › 不收集数据**。
+
+## 5. 审核备注（复制到 App Store Connect › App 审核信息 › 备注）
+
+> Skill Hub 是一个本地开发者工具，用来管理 AI 编程助手（Cursor、Claude Code、Codex 等）安装在用户主目录隐藏文件夹里的 "skills"（Markdown 文件夹）。
+>
+> 首次启动时应用会请求一次用户主目录的访问权限（标准 NSOpenPanel + security-scoped bookmark）。这是必要的，因为这些工具把 skills 固定放在 ~/.cursor/skills、~/.claude/skills、~/.codex/skills、~/.agents/skills 等位置，用户无法更改；没有这个权限应用就没有任何内容可显示。应用只读写这些 skill 文件夹和 ~/.skill-hub，不联网，不收集任何数据。
+>
+> 测试建议：授权主目录后，如果测试机上没有安装任何 AI 编程工具，列表会为空；可用工具栏「新建 › 新建 Skill」创建一个示例 skill，即可体验预览、编辑、安装到其他工具、去重、归档等全部功能。
+>
+> 无需登录账号，无内购。
+
+英文版：
+
+> Skill Hub is a local developer utility for managing the "skills" (folders of Markdown files) that AI coding assistants such as Cursor, Claude Code and Codex install into hidden folders in the user's home directory.
+>
+> On first launch the app asks once for access to the home folder (standard NSOpenPanel with a security-scoped bookmark). This is required: the tools store skills at fixed paths such as ~/.cursor/skills, ~/.claude/skills, ~/.codex/skills and ~/.agents/skills, which the user cannot change, and without access the app has nothing to show. The app only reads and writes those skill folders and ~/.skill-hub. It has no network access and collects no data.
+>
+> To test: after granting access, if the test machine has no AI coding tools installed the lists will be empty. Use the toolbar "New › New Skill" to create a sample skill, which exercises preview, edit, install-to-other-tool, dedupe and archive.
+>
+> No account, no in-app purchases.
+
+## 6. 👤 部署支持页和隐私页
+
+在 `~/projects/alexsignal-site` 已新增两页（类型检查通过）：
+
+- `app/skill-hub/page.tsx` → `https://alexsignal.com/skill-hub`（支持页，也作为 marketing URL）
+- `app/skill-hub/privacy/page.tsx` → `https://alexsignal.com/skill-hub/privacy`
+
+按你平时的方式提交并部署即可。**提交审核前请在浏览器里确认两个 URL 能打开**，5.1.1 会因为隐私页 404 直接被拒。
+
+## 7. 归档并上传构建
+
+Xcode 登录完成后：
+
+```bash
+scripts/archive.sh            # 归档 + 导出 build/export/Skill Hub.pkg（自动创建分发证书和描述文件）
+```
+
+上传二选一：
+
+```bash
+# A. Transporter.app（Mac App Store 免费下载），把 .pkg 拖进去
+# B. 命令行，用 §2b 的 API key
+xcrun altool --upload-app --type macos --file "build/export/Skill Hub.pkg" \
+  --apiKey "<KEY_ID>" --apiIssuer "<ISSUER_ID>"
+```
+
+上传后 10–30 分钟处理完成，`asc builds list --app "$APP_ID" --output table` 能看到。
+
+## 8. 提交审核
+
+```bash
+asc validate --app "$APP_ID" --version 1.0.0 --platform MAC_OS --output table   # 缺什么会直接列出来
+asc review submit --app "$APP_ID" --version 1.0.0 --build "<BUILD_ID>" --dry-run --output table
+asc review submit --app "$APP_ID" --version 1.0.0 --build "<BUILD_ID>" --confirm
+asc submissions list --app "$APP_ID" --output table   # 之后用这条看状态
+```
+
+## 9. 多语言（可选，首版不必）
+
+`asc-localize-metadata` Skill 的做法：先在 App Store Connect 里添加本地化语言，再 `asc metadata pull` 拉下来、翻译 `metadata/version/1.0.0/<locale>.json`、`asc metadata push`。关键词按地区调整（例如日语区 "スキル,プロンプト"），每个 locale 都要 ≤100 字节。
+
+## 10. 待你确认的事实字段
+
+| 字段 | 当前值 | 说明 |
+|---|---|---|
+| 版权 | `2026 周诗豪` | 取自证书主体，可改 |
+| 价格 | 免费 | 建议 v1 免费积累评分，付费另开新版本 |
+| 支持邮箱 | `hello@alexsignal.com` | 页面里写的，确认能收信 |
+| 隐私 / 支持 URL | alexsignal.com/skill-hub(/privacy) | 部署后确认可访问 |
+| SKU | `SKILLHUB-MAC-001` | 任意唯一字符串 |
+| 主语言 | zh-Hans | 界面目前只有中文 |
+
+## 常用重拍截图
+
+窗口放在 MacBook 内屏（Retina），把界面切到想拍的状态，然后：
+
+```bash
+scripts/capture-screenshot.sh 05-dedupe "同一份 skill，装了三处" "一键保留实体、清掉多余链接" 0.55
+```
+
+会生成 `docs/app-store/screenshots/raw/05-dedupe.png` 和成品 `zh-Hans/05-dedupe.png`。
