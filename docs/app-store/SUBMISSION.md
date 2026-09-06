@@ -1,5 +1,19 @@
 # Skill Hub — Mac App Store 上架手册
 
+发版主干（照搬「appstore」Skill 的流程，每步可单独重跑，都是幂等的）：
+
+```
+python3 scripts/lint-metadata.py          # 码点+UTF-16 双计数、关键词字节、互抄、商标词、占位符
+asc metadata validate --dir ./metadata    # asc 自己的字段校验
+asc metadata push … --dry-run             # 看 drift：远端被手改过的字段会在这里现形
+asc metadata push …                       # 推送 = 一次重推，回滚就是改本地再推一次
+scripts/screenshots-review.sh             # 上传前单页 HTML 人工审批 + 打印 sha256
+asc screenshots upload …                  # 上传
+asc screenshots list … | jq checksum      # 上传后按 checksum 校验，不数文件
+asc validate --app … --version …          # 提交前 readiness gate
+asc review submit … --confirm             # 提交
+```
+
 按「审核合规 → 元数据/ASO → 截图 → 上传提交 → 多语言」的顺序。已经替你做完的部分打了 ✅，需要你本人操作（涉及 Apple 账号登录、2FA、付款）的部分标了 👤。
 
 ## 0. 现状
@@ -23,6 +37,7 @@
 | 2.3 元数据准确 | 通过 | 描述/截图均来自当前构建 |
 | 2.4.5 Mac 应用要求：沙盒、无私有 API | 通过 | `codesign -d --entitlements` 只有 sandbox / user-selected / bookmarks |
 | 4.2 最小功能 | 通过 | 原生工具，非套壳 |
+| 2.3.7 / 5.2 关键词里的第三方商标 | 已修 | 关键词字段去掉了 `claude`、`codex`；描述里作为「兼容 Cursor、Claude Code、Codex」的互操作说明保留，这是允许的 |
 | 5.1.1 隐私政策 URL | **待部署** | `https://alexsignal.com/skill-hub/privacy` |
 | 5.1.2 隐私标签 | 选「不收集数据」 | 无网络、无 SDK |
 | 隐私清单 | 通过 | UserDefaults CA92.1、文件时间戳 DDA9.1 + 3B52.1 |
@@ -83,9 +98,20 @@ asc metadata push --app "$APP_ID" --version 1.0.0 --platform MAC_OS --dir ./meta
 # 版权（不是本地化字段）
 asc versions update --version-id "$(asc versions list --app "$APP_ID" --platform MAC_OS --output json | jq -r '.data[0].id')" --copyright "2026 周诗豪"
 
-# 截图（Mac 的展示类型是 APP_DESKTOP）
+# 截图：先本地审批，再上传，再按 checksum 核对（Mac 的展示类型是 APP_DESKTOP）
+scripts/screenshots-review.sh zh-Hans
 asc screenshots upload --app "$APP_ID" --version 1.0.0 --path ./docs/app-store/screenshots/zh-Hans --device-type APP_DESKTOP --dry-run
 asc screenshots upload --app "$APP_ID" --version 1.0.0 --path ./docs/app-store/screenshots/zh-Hans --device-type APP_DESKTOP
+asc screenshots list --app "$APP_ID" --version 1.0.0 --output json | jq -r '.data[].attributes | "\(.fileName) \(.sourceFileChecksum)"'
+```
+
+英文截图直接复用中文图并换标题（en-US 和 en-GB 共用一套）：
+
+```bash
+swift scripts/compose-screenshot.swift docs/app-store/screenshots/raw/02-skills-map.png  docs/app-store/screenshots/en/01-map.png      "Every skill, at a glance"        "Scans Cursor, Claude Code, Codex and more; clusters by name prefix" 0.62
+swift scripts/compose-screenshot.swift docs/app-store/screenshots/raw/03-skill-detail.png docs/app-store/screenshots/en/02-detail.png   "Read, edit, save — in one place" "Rendered Markdown preview, edit SKILL.md in place, paths and installs in the inspector" 0.08
+swift scripts/compose-screenshot.swift docs/app-store/screenshots/raw/01-overview.png     docs/app-store/screenshots/en/03-overview.png "Duplicates and broken links, gone" "Per-tool counts, health checks, one-click dedupe" 0.35
+swift scripts/compose-screenshot.swift docs/app-store/screenshots/raw/04-prompt-detail.png docs/app-store/screenshots/en/04-prompts.png "Prompts, managed too"           "Embedded and standalone prompts: star, tag, save a copy" 0.78
 ```
 
 网页里还要手动点三处（API 不支持）：**定价**（建议先免费）、**年龄分级问卷**（全选无）、**App 隐私 › 不收集数据**。
@@ -147,9 +173,11 @@ asc review submit --app "$APP_ID" --version 1.0.0 --build "<BUILD_ID>" --confirm
 asc submissions list --app "$APP_ID" --output table   # 之后用这条看状态
 ```
 
-## 9. 多语言（可选，首版不必）
+## 9. 多语言
 
-`asc-localize-metadata` Skill 的做法：先在 App Store Connect 里添加本地化语言，再 `asc metadata pull` 拉下来、翻译 `metadata/version/1.0.0/<locale>.json`、`asc metadata push`。关键词按地区调整（例如日语区 "スキル,プロンプト"），每个 locale 都要 ≤100 字节。
+已带三个 locale：`zh-Hans`（主语言）、`en-US`、`en-GB`。**en-GB 不是多余的**：它是大量非英语国家商店（欧洲、东南亚、印度、澳洲等）的英文索引位，只有 en-US 会漏掉这些地区的英文搜索。
+
+再加语言时：先 `asc metadata pull` 拉一次远端避免 drift，复制一份 `en-US.json` 改名翻译，`python3 scripts/lint-metadata.py` 过一遍（关键词按地区重写，例如日语区 `スキル,プロンプト`，每个 locale 都要 ≤100 字节），再 `push --dry-run`。
 
 ## 10. 待你确认的事实字段
 
