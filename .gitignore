@@ -12,3 +12,9 @@ xcuserdata/
 keys/
 *.p8
 .asc/
+
+# Windows / .NET
+windows/**/bin/
+windows/**/obj/
+dist/
+.dotnet/

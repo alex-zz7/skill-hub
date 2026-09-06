@@ -1,0 +1,96 @@
+<Window xmlns="https://github.com/avaloniaui"
+        xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+        xmlns:local="using:SkillHub.App"
+        x:Class="SkillHub.App.MainWindow"
+        Title="Skill Hub"
+        Width="1280"
+        Height="820"
+        MinWidth="960"
+        MinHeight="600">
+    <DockPanel>
+        <Border DockPanel.Dock="Top" Padding="10,8" BorderBrush="{DynamicResource SystemControlForegroundBaseLowBrush}" BorderThickness="0,0,0,1">
+            <Grid ColumnDefinitions="*,Auto">
+                <TextBlock x:Name="StatusLabel" Classes="muted" VerticalAlignment="Center" Text="准备就绪" />
+                <StackPanel Grid.Column="1" Orientation="Horizontal" Spacing="8">
+                    <Button x:Name="NewSkillButton" Content="新建 Skill" />
+                    <Button x:Name="NewPromptButton" Content="新建 Prompt" />
+                    <Button x:Name="RefreshButton" Content="刷新" />
+                    <ToggleButton x:Name="InspectorToggle" Content="检查器" IsChecked="True" />
+                </StackPanel>
+            </Grid>
+        </Border>
+
+        <Grid ColumnDefinitions="230,4,320,4,*,4,300">
+            <DockPanel>
+                <Border DockPanel.Dock="Bottom" Padding="12,10" BorderBrush="{DynamicResource SystemControlForegroundBaseLowBrush}" BorderThickness="0,1,0,0">
+                    <TextBlock x:Name="FooterLabel" Classes="caption" TextWrapping="Wrap"
+                               Text="扫描用户目录下的 Cursor / Claude / Codex skills。不联网。" />
+                </Border>
+                <ListBox x:Name="SidebarList" Classes="plain" />
+            </DockPanel>
+
+            <GridSplitter Grid.Column="1" Width="4" Background="Transparent" ResizeDirection="Columns" />
+
+            <DockPanel Grid.Column="2">
+                <StackPanel DockPanel.Dock="Top" Margin="10,8">
+                    <TextBox x:Name="SearchBox" Watermark="搜索名称、描述或路径" />
+                    <ItemsControl x:Name="BreadcrumbBar" Margin="0,8,0,0" IsVisible="False">
+                        <ItemsControl.ItemsPanel>
+                            <ItemsPanelTemplate>
+                                <StackPanel Orientation="Horizontal" Spacing="4" />
+                            </ItemsPanelTemplate>
+                        </ItemsControl.ItemsPanel>
+                    </ItemsControl>
+                </StackPanel>
+                <TextBlock x:Name="BrowseEmpty" Classes="muted" Margin="16" Text="这里还没有内容。" IsVisible="False" />
+                <ListBox x:Name="BrowseList" Classes="plain" />
+            </DockPanel>
+
+            <GridSplitter Grid.Column="3" Width="4" Background="Transparent" ResizeDirection="Columns" />
+
+            <DockPanel Grid.Column="4">
+                <Grid DockPanel.Dock="Top" Margin="16,10" ColumnDefinitions="*,Auto">
+                    <StackPanel>
+                        <TextBlock x:Name="DetailTitle" FontSize="20" FontWeight="SemiBold" Text="总览" />
+                        <TextBlock x:Name="DetailSubtitle" Classes="caption" Margin="0,2,0,0" />
+                    </StackPanel>
+                    <StackPanel Grid.Column="1" Orientation="Horizontal" Spacing="8">
+                        <ComboBox x:Name="DocumentModeBox" Width="100" IsVisible="False">
+                            <ComboBoxItem Content="预览" Tag="Preview" />
+                            <ComboBoxItem Content="编辑" Tag="Edit" />
+                        </ComboBox>
+                        <Button x:Name="SaveButton" Content="保存" IsVisible="False" />
+                        <Button x:Name="DiscardButton" Content="丢弃" IsVisible="False" />
+                    </StackPanel>
+                </Grid>
+                <ScrollViewer x:Name="OverviewHost">
+                    <StackPanel Margin="16" Spacing="16" MaxWidth="1100">
+                        <UniformGrid x:Name="StatsGrid" Columns="4" />
+                        <Grid x:Name="OverviewSplit" ColumnDefinitions="*,16,*" />
+                        <Border Classes="card">
+                            <DockPanel MinHeight="440">
+                                <TextBlock DockPanel.Dock="Top" FontWeight="SemiBold" Margin="0,0,0,8" Text="按名称前缀聚类" />
+                                <local:ClusterMapControl x:Name="OverviewMap" />
+                            </DockPanel>
+                        </Border>
+                    </StackPanel>
+                </ScrollViewer>
+                <local:ClusterMapControl x:Name="DetailMap" IsVisible="False" />
+                <ScrollViewer x:Name="PreviewHost" IsVisible="False">
+                    <StackPanel x:Name="PreviewPanel" Margin="24" MaxWidth="760" Spacing="10" />
+                </ScrollViewer>
+                <DockPanel x:Name="EditorHost" IsVisible="False">
+                    <TextBlock DockPanel.Dock="Bottom" x:Name="EditorStatus" Classes="caption" Margin="12,6" />
+                    <TextBox x:Name="EditorBox" Classes="mono" AcceptsReturn="True" TextWrapping="Wrap"
+                             FontSize="13" BorderThickness="0" />
+                </DockPanel>
+            </DockPanel>
+
+            <GridSplitter x:Name="InspectorSplitter" Grid.Column="5" Width="4" Background="Transparent" ResizeDirection="Columns" />
+
+            <ScrollViewer x:Name="InspectorHost" Grid.Column="6">
+                <StackPanel x:Name="InspectorPanel" Margin="14" Spacing="14" />
+            </ScrollViewer>
+        </Grid>
+    </DockPanel>
+</Window>

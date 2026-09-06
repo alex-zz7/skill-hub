@@ -2,19 +2,24 @@
 
 本地管理 AI 编程助手的 skills（`SKILL.md` 文件夹）和 prompts。扫描 Cursor、Claude Code、Codex、Agents、Proma 等工具目录，聚类、去重、预览、编辑、归档。不联网，不收集数据。
 
-商店名：**AI Skills Hub**。Mac 上菜单栏 / Dock 显示 **Skill Hub**。
+商店名：**AI Skills Hub**。窗口标题 / Dock 显示 **Skill Hub**。
 
-> **Windows 现在装不了这个 App。** 它是 SwiftUI + App Sandbox 的原生 macOS 应用，不能交叉编译成 `.exe`。下面 Windows 一节写的是技能文件本身怎么管，不是客户端安装包。
+两套客户端，同一套规则：
+
+- **macOS**：原生 SwiftUI（本仓库根目录）。App Store 上架。
+- **Windows**：Avalonia 桌面版（`windows/`）。扫描路径、去重、归档、气泡图逻辑与 Mac 对齐。不能把 `.app` 交叉编译成 `.exe`，所以 Windows 是单独写的一版。
+
+收藏、标签、备注存在各自系统的应用数据目录里，不会自动同步；磁盘上的 skill 文件夹是同一套。
 
 ---
 
 ## 系统要求
 
-| 平台 | 能不能装这个 App | 最低要求 |
+| 平台 | 客户端 | 最低要求 |
 | --- | --- | --- |
-| macOS | 可以 | macOS 15 Sequoia 或更新 |
-| Windows | 不可以 | 没有 Windows 客户端 |
-| Linux | 不可以 | 没有 Linux 客户端 |
+| macOS | 原生 Skill Hub | macOS 15 Sequoia 或更新 |
+| Windows | SkillHub.exe（自包含） | Windows 10 1809+ x64 |
+| Linux | 无 | — |
 
 ---
 
@@ -62,49 +67,65 @@ scripts/archive.sh
 
 ---
 
-## Windows：现在怎么用
+## Windows 安装
 
-**没有安装包，也不要去找 `.exe`。** 把 macOS 的 `.app` / `.pkg` 拷到 Windows 上打不开。
+### 方式 A：下载现成包
 
-Windows 上 Cursor、Claude Code、Codex 仍然会把 skills 写到用户目录。你可以自己打开这些文件夹增删改：
+1. 打开 [Releases](https://github.com/alex-zz7/skill-hub/releases) 或仓库 **Actions** 里最新一次 `Windows client` 的产物。
+2. 下载 `SkillHub-win-x64.zip`，解压到任意目录（例如 `D:\Apps\SkillHub`）。
+3. 双击 `SkillHub.exe`。不需要单独装 .NET。
+4. 第一次打开会直接扫描 `%USERPROFILE%` 下的工具目录，没有 Mac 那种授权门。
 
-| 工具 | Windows 路径 |
-| --- | --- |
-| Cursor | `%USERPROFILE%\.cursor\skills` |
-| Cursor 内置（不要改） | `%USERPROFILE%\.cursor\skills-cursor` |
-| Claude | `%USERPROFILE%\.claude\skills` |
-| Codex | `%USERPROFILE%\.codex\skills` |
-| Agents | `%USERPROFILE%\.agents\skills` |
-| Proma | `%USERPROFILE%\.proma\default-skills` |
-| Codex Prompts | `%USERPROFILE%\.codex\prompts` |
+SmartScreen 可能提示「未知发布者」：选「更多信息 → 仍要运行」。这是未做 Authenticode 签名的开源包，正常。
 
-PowerShell 里快速打开 Cursor 的 skills 目录：
+「安装到其他工具」默认做目录链接。若 Windows 没开[开发人员模式](https://learn.microsoft.com/windows/apps/get-started/enable-your-device-for-development)，创建符号链接会失败，客户端会改用目录联接（junction）。也可以勾选「复制成独立实体」。
+
+### 方式 B：从源码编译
+
+需要 [.NET 9 SDK](https://dotnet.microsoft.com/download/dotnet/9.0)：
+
+```powershell
+git clone https://github.com/alex-zz7/skill-hub.git
+cd skill-hub
+dotnet run --project windows/src/SkillHub.App
+```
+
+打自包含发布包（在 Mac 或 Windows 上都能做）：
+
+```bash
+windows/scripts/publish.sh win-x64
+# 产物：dist/SkillHub-win-x64.zip
+```
+
+跑与 Mac 同一套规则的测试：
+
+```bash
+dotnet test windows/SkillHub.sln -c Release
+```
+
+---
+
+## 它扫哪些路径
+
+相对家目录的布局两边一样：
+
+| 工具 | macOS | Windows |
+| --- | --- | --- |
+| Cursor | `~/.cursor/skills` | `%USERPROFILE%\.cursor\skills` |
+| Cursor 内置（只读） | `~/.cursor/skills-cursor` | `%USERPROFILE%\.cursor\skills-cursor` |
+| Claude | `~/.claude/skills` | `%USERPROFILE%\.claude\skills` |
+| Codex | `~/.codex/skills` | `%USERPROFILE%\.codex\skills` |
+| Agents | `~/.agents/skills` | `%USERPROFILE%\.agents\skills` |
+| Proma | `~/.proma/default-skills` | `%USERPROFILE%\.proma\default-skills` |
+| Codex Prompts | `~/.codex/prompts` | `%USERPROFILE%\.codex\prompts` |
+| 本应用库 / 归档 | `~/.skill-hub/` | `%USERPROFILE%\.skill-hub\` |
+| 项目级（可选） | `~/Projects/*/.cursor/skills` 等 | `%USERPROFILE%\Projects\*\.cursor\skills` 等 |
+
+PowerShell 里打开 Cursor 的 skills 目录：
 
 ```powershell
 explorer "$env:USERPROFILE\.cursor\skills"
 ```
-
-每个 skill 是一个文件夹，里面至少有 `SKILL.md`。改文件、复制到另一个工具目录、删掉重复副本，都是普通文件操作。没有 Skill Hub 的气泡图、一键去重和归档。
-
-如果以后要做 Windows 客户端，需要单独写一版（例如 Tauri / 原生），**不是**把现在的 Mac 工程打包出去。需要的话开 Issue 说一声。
-
----
-
-## 它扫哪些 Mac 路径
-
-和 Windows 是同一套相对路径，只是家目录写法不同：
-
-| 工具 | macOS 路径 |
-| --- | --- |
-| Cursor | `~/.cursor/skills` |
-| Cursor 内置（只读） | `~/.cursor/skills-cursor` |
-| Claude | `~/.claude/skills` |
-| Codex | `~/.codex/skills` |
-| Agents | `~/.agents/skills` |
-| Proma | `~/.proma/default-skills` |
-| Codex Prompts | `~/.codex/prompts` |
-| 本应用库 / 归档 | `~/.skill-hub/` |
-| 项目级（可选） | `~/Projects/*/.cursor/skills`、`~/Projects/*/.claude/skills` |
 
 ---
 

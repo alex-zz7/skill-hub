@@ -1,0 +1,37 @@
+name: Windows client
+
+on:
+  push:
+    branches: [main]
+    paths:
+      - "windows/**"
+      - ".github/workflows/windows.yml"
+  pull_request:
+    paths:
+      - "windows/**"
+  workflow_dispatch:
+
+jobs:
+  test:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-dotnet@v4
+        with:
+          dotnet-version: "9.0.x"
+      - run: dotnet test windows/SkillHub.sln -c Release --nologo
+
+  publish:
+    needs: test
+    runs-on: windows-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-dotnet@v4
+        with:
+          dotnet-version: "9.0.x"
+      - run: dotnet publish windows/src/SkillHub.App/SkillHub.App.csproj -c Release -r win-x64 --self-contained true -p:EnableWindowsTargeting=true -o dist/win-x64
+      - run: Compress-Archive -Path dist/win-x64 -DestinationPath dist/SkillHub-win-x64.zip
+      - uses: actions/upload-artifact@v4
+        with:
+          name: SkillHub-win-x64
+          path: dist/SkillHub-win-x64.zip
