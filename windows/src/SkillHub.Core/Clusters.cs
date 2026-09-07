@@ -282,35 +282,35 @@ public static class ClusterLayout
 public static class UsageScore
 {
     public static double Score(
-        int openCount,
-        DateTime? lastOpenedAt,
+        int invocationCount,
+        DateTime? lastInvokedAt,
         bool starred,
         int installs,
         DateTime modifiedAt,
         DateTime now)
     {
-        var opens = openCount * 10.0;
+        var calls = invocationCount * 10.0;
         var star = starred ? 16.0 : 0;
         var places = Math.Max(installs, 1) * 3.0;
-        var last = lastOpenedAt ?? modifiedAt;
-        var daysSinceOpen = (now - last).TotalDays;
-        var recency = Math.Max(0, 18 - daysSinceOpen * 0.45);
+        var last = lastInvokedAt ?? modifiedAt;
+        var daysSinceCall = (now - last).TotalDays;
+        var recency = Math.Max(0, 18 - daysSinceCall * 0.45);
         var freshness = Math.Max(0, 6 - (now - modifiedAt).TotalDays / 10);
-        return Math.Max(1, 2 + opens + star + places + recency + freshness);
+        return Math.Max(1, 2 + calls + star + places + recency + freshness);
     }
 
-    public static double Score(SkillItem skill, ItemMeta meta, DateTime now) =>
-        Score(meta.OpenCount, meta.LastOpenedAt, meta.Starred, skill.LiveInstallCount, skill.ModifiedAt, now);
+    public static double Score(SkillItem skill, ItemMeta meta, UsageStat usage, DateTime now) =>
+        Score(usage.Count, usage.LastInvokedAt, meta.Starred, skill.LiveInstallCount, skill.ModifiedAt, now);
 
-    public static double Score(PromptItem prompt, ItemMeta meta, DateTime now) =>
-        Score(meta.OpenCount, meta.LastOpenedAt, meta.Starred, 1, prompt.ModifiedAt, now);
+    public static double Score(PromptItem prompt, ItemMeta meta, UsageStat usage, DateTime now) =>
+        Score(usage.Count, usage.LastInvokedAt, meta.Starred, 1, prompt.ModifiedAt, now);
 
-    public static string Caption(int openCount, bool starred, int installs)
+    public static string Caption(int invocationCount, bool starred, int installs)
     {
         var parts = new List<string>();
-        if (openCount > 0)
+        if (invocationCount > 0)
         {
-            parts.Add($"打开 {openCount} 次");
+            parts.Add($"调用 {invocationCount} 次");
         }
 
         if (starred)
@@ -323,7 +323,7 @@ public static class UsageScore
             parts.Add($"装在 {installs} 处");
         }
 
-        return parts.Count == 0 ? "还没打开过" : string.Join(" · ", parts);
+        return parts.Count == 0 ? "还没被调用过" : string.Join(" · ", parts);
     }
 }
 

@@ -34,6 +34,10 @@ struct ClusterMapView: View {
                     }
                     .position(expanded || reduceMotion ? placement.center : center)
                     .opacity(expanded ? 1 : 0)
+                    .transition(.asymmetric(
+                        insertion: .scale(scale: 0.5).combined(with: .opacity),
+                        removal: .opacity
+                    ))
                 }
             }
 
@@ -54,9 +58,14 @@ struct ClusterMapView: View {
             canvas = size
         }
         .onChange(of: layoutKey, initial: true) {
-            placements = ClusterLayout.plan(nodes: nodes, canvas: canvas)
+            let next = ClusterLayout.plan(nodes: nodes, canvas: canvas)
+            if expanded {
+                withAnimation(reduceMotion ? .easeOut(duration: 0.15) : Theme.quick) { placements = next }
+            } else {
+                placements = next
+            }
         }
-        .task(id: "\(layoutKey)|\(replayToken)") {
+        .task(id: replayToken) {
             await replay()
         }
     }

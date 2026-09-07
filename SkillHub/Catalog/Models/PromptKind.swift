@@ -8,8 +8,8 @@ nonisolated enum PromptKind: String, Codable, Sendable, Hashable {
 
     var title: String {
         switch self {
-        case .standalone: "独立"
-        case .embedded: "内嵌"
+        case .standalone: String(localized: "独立")
+        case .embedded: String(localized: "内嵌")
         }
     }
 }

@@ -14,10 +14,10 @@ struct SidebarFooter: View {
             }
             Spacer()
         }
-        .font(.footnote)
+        .font(Theme.body.weight(.medium))
         .foregroundStyle(.secondary)
         .padding(.horizontal, 16)
-        .padding(.vertical, 8)
+        .padding(.vertical, 10)
         .background(.bar)
     }
 }

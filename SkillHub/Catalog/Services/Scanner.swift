@@ -24,9 +24,10 @@ nonisolated enum Scanner {
             }
         }
 
-        let skills = buckets.values.map { $0.finish(paths: paths) }.sorted {
+        var skills = buckets.values.map { $0.finish(paths: paths) }.sorted {
             $0.name.localizedCaseInsensitiveCompare($1.name) == .orderedAscending
         }
+        markSameNames(&skills)
 
         var prompts: [PromptItem] = []
         var seenPrompt = Set<String>()
@@ -83,8 +84,30 @@ nonisolated enum Scanner {
                 fileCount: fileCount,
                 modifiedAt: modifiedAt,
                 health: issues.sorted { $0.rawValue < $1.rawValue },
-                isReadOnly: readOnly
+                isReadOnly: readOnly,
+                author: document.author,
+                origin: document.origin
             )
+        }
+    }
+
+    /// Two folders with the same skill name are not a "duplicate install" (that is one folder, many links);
+    /// they are separate copies that may have drifted, which is the case prefix grouping alone cannot show.
+    private static func markSameNames(_ skills: inout [SkillItem]) {
+        var byName: [String: [Int]] = [:]
+        for (index, skill) in skills.enumerated() {
+            byName[skill.name.lowercased(), default: []].append(index)
+        }
+        for indexes in byName.values where indexes.count > 1 {
+            for index in indexes {
+                skills[index].sameNamePaths = indexes
+                    .filter { $0 != index }
+                    .map { skills[$0].canonicalPath }
+                if !skills[index].health.contains(.sameNameElsewhere) {
+                    skills[index].health.append(.sameNameElsewhere)
+                    skills[index].health.sort { $0.rawValue < $1.rawValue }
+                }
+            }
         }
     }
 

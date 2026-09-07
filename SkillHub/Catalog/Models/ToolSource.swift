@@ -15,14 +15,14 @@ nonisolated enum ToolSource: String, Codable, CaseIterable, Sendable, Hashable {
     var title: String {
         switch self {
         case .cursorUser: "Cursor"
-        case .cursorBuiltin: "Cursor 内置"
+        case .cursorBuiltin: String(localized: "Cursor 内置")
         case .claude: "Claude"
         case .codex: "Codex"
         case .agents: "Agents"
         case .proma: "Proma"
-        case .promptLibrary: "Skill Hub 库"
+        case .promptLibrary: String(localized: "Skill Hub 库")
         case .codexPrompts: "Codex Prompts"
-        case .custom: "自定义"
+        case .custom: String(localized: "自定义")
         }
     }
 

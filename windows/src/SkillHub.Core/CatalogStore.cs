@@ -32,6 +32,7 @@ public sealed class CatalogStore : INotifyPropertyChanged
     public IReadOnlyList<SkillItem> Skills { get; private set; }
     public IReadOnlyList<PromptItem> Prompts { get; private set; }
     public OverviewStats Stats { get; private set; }
+    public UsageIndex Usage { get; private set; } = UsageIndex.Empty;
     public AppMeta Meta { get; private set; }
     public bool IsScanning { get; private set; }
     public bool HasLoaded { get; private set; }
@@ -158,13 +159,10 @@ public sealed class CatalogStore : INotifyPropertyChanged
     public SkillItem? SelectedSkill => Skills.FirstOrDefault(s => s.Id == SelectedSkillId);
     public PromptItem? SelectedPrompt => Prompts.FirstOrDefault(p => p.Id == SelectedPromptId);
 
-    public DocumentRef? CurrentDocument => SidebarSelection switch
-    {
-        SidebarItem.Overview or null => null,
-        SidebarItem.Skills => SelectedSkill == null ? null : new DocumentRef.Skill(SelectedSkill),
-        SidebarItem.Prompts => SelectedPrompt == null ? null : new DocumentRef.Prompt(SelectedPrompt),
-        _ => null
-    };
+    public DocumentRef? CurrentDocument =>
+        SelectedSkill != null ? new DocumentRef.Skill(SelectedSkill)
+        : SelectedPrompt != null ? new DocumentRef.Prompt(SelectedPrompt)
+        : null;
 
     public BrowseFilter CurrentFilter => SidebarSelection?.Filter ?? BrowseFilter.AllFilter;
 
@@ -182,7 +180,12 @@ public sealed class CatalogStore : INotifyPropertyChanged
     public bool IsSearching => !string.IsNullOrWhiteSpace(SearchText);
     public string? ClusterPrefix => ClusterPath.Count == 0 ? null : string.Join('-', ClusterPath);
     public string ClusterTitle => ClusterPrefix ?? SidebarSelection?.Title ?? "Skills";
-    public int ClusterItemCount => SidebarSelection?.IsPrompts == true ? VisiblePrompts.Count : VisibleSkills.Count;
+    public int ClusterItemCount =>
+        SidebarSelection?.IsOverview == true
+            ? VisibleSkills.Count + VisiblePrompts.Count
+            : SidebarSelection?.IsPrompts == true
+                ? VisiblePrompts.Count
+                : VisibleSkills.Count;
     public IReadOnlyList<ClusterNode> ClusterNodesUnlimited => ClusterNodes(null);
     public IReadOnlyList<ClusterNode> ClusterNodesForMap => ClusterNodes(28);
 
@@ -207,7 +210,9 @@ public sealed class CatalogStore : INotifyPropertyChanged
     public void Bootstrap()
     {
         Meta = _metaStore.Load(Paths.LegacyMetaFile);
+        Usage = UsageLog.LoadIndex(_metaStore.UsageCachePath);
         Raise(nameof(Meta));
+        Raise(nameof(Usage));
         Refresh();
     }
 
@@ -231,6 +236,22 @@ public sealed class CatalogStore : INotifyPropertyChanged
                 }
 
                 Apply(snapshot);
+                var cachePath = _metaStore.UsageCachePath;
+                _ = Task.Run(() =>
+                {
+                    var latest = UsageLog.Scan(paths.Home, cachePath);
+                    OnUi(() =>
+                    {
+                        if (generation != _scanGeneration)
+                        {
+                            return;
+                        }
+
+                        Usage = latest;
+                        Raise(nameof(Usage));
+                        RefreshDerived();
+                    });
+                });
             });
         });
     }
@@ -240,8 +261,27 @@ public sealed class CatalogStore : INotifyPropertyChanged
         ClusterPath = [];
         SearchText = "";
         DocumentMode = DocumentMode.Preview;
+        _selectedSkillId = null;
+        _selectedPromptId = null;
+        MapReplayToken++;
         Raise(nameof(ClusterPath));
         Raise(nameof(ClusterPrefix));
+        Raise(nameof(SelectedSkillId));
+        Raise(nameof(SelectedPromptId));
+        Raise(nameof(MapReplayToken));
+        SelectionDidChange();
+        RefreshDerived();
+    }
+
+    public void ShowClusterMap()
+    {
+        _selectedSkillId = null;
+        _selectedPromptId = null;
+        DocumentMode = DocumentMode.Preview;
+        MapReplayToken++;
+        Raise(nameof(SelectedSkillId));
+        Raise(nameof(SelectedPromptId));
+        Raise(nameof(MapReplayToken));
         SelectionDidChange();
         RefreshDerived();
     }
@@ -267,7 +307,6 @@ public sealed class CatalogStore : INotifyPropertyChanged
         }
 
         LoadDocument(document);
-        RecordOpen(document);
         Raise(nameof(CurrentDocument));
     }
 
@@ -276,22 +315,26 @@ public sealed class CatalogStore : INotifyPropertyChanged
         switch (document)
         {
             case DocumentRef.Skill skill:
-                if (SidebarSelection?.IsPrompts != false)
+                if (SidebarSelection?.IsPrompts == true)
                 {
                     _sidebarSelection = SidebarItem.AllSkills;
                     Raise(nameof(SidebarSelection));
                 }
 
+                _selectedPromptId = null;
+                Raise(nameof(SelectedPromptId));
                 _selectedSkillId = skill.Item.Id;
                 Raise(nameof(SelectedSkillId));
                 break;
             case DocumentRef.Prompt prompt:
-                if (SidebarSelection?.IsPrompts != true)
+                if (SidebarSelection?.IsOverview != true && SidebarSelection?.IsPrompts != true)
                 {
                     _sidebarSelection = SidebarItem.AllPrompts;
                     Raise(nameof(SidebarSelection));
                 }
 
+                _selectedSkillId = null;
+                Raise(nameof(SelectedSkillId));
                 _selectedPromptId = prompt.Item.Id;
                 Raise(nameof(SelectedPromptId));
                 break;
@@ -364,9 +407,9 @@ public sealed class CatalogStore : INotifyPropertyChanged
     {
         ClusterKind.Group => $"{node.Count} 个 · 点开这一类",
         ClusterKind.Skill s when Skills.FirstOrDefault(item => item.Id == s.Id) is { } skill =>
-            UsageScore.Caption(Meta.ItemForSkill(s.Id).OpenCount, Meta.ItemForSkill(s.Id).Starred, skill.LiveInstallCount),
-        ClusterKind.Prompt p =>
-            UsageScore.Caption(Meta.ItemForPrompt(p.Id).OpenCount, Meta.ItemForPrompt(p.Id).Starred, 1),
+            UsageScore.Caption(Usage.Skill(skill).Count, Meta.ItemForSkill(s.Id).Starred, skill.LiveInstallCount),
+        ClusterKind.Prompt p when Prompts.FirstOrDefault(item => item.Id == p.Id) is { } prompt =>
+            UsageScore.Caption(Usage.Prompt(prompt).Count, Meta.ItemForPrompt(p.Id).Starred, 1),
         _ => ""
     };
 
@@ -379,7 +422,7 @@ public sealed class CatalogStore : INotifyPropertyChanged
 
         var count = item switch
         {
-            SidebarItem.Overview => Skills.Count,
+            SidebarItem.Overview => Skills.Count + Prompts.Count,
             SidebarItem.Skills s => Skills.Count(skill => Matches(s.Browse, skill)),
             SidebarItem.Prompts p => Prompts.Count(prompt => Matches(p.Browse, prompt)),
             _ => 0
@@ -450,13 +493,6 @@ public sealed class CatalogStore : INotifyPropertyChanged
 
         Update(document, item => item.Notes = notes);
     }
-
-    public void RecordOpen(DocumentRef document) =>
-        Update(document, item =>
-        {
-            item.OpenCount++;
-            item.LastOpenedAt = DateTime.Now;
-        });
 
     public void SetScanProjectSkills(bool enabled)
     {
@@ -856,25 +892,37 @@ public sealed class CatalogStore : INotifyPropertyChanged
     public IReadOnlyList<ClusterNode> ClusterNodes(int? looseCap)
     {
         IReadOnlyList<ClusterBuilder.Item> items;
-        if (SidebarSelection?.IsPrompts == true)
+        if (SidebarSelection?.IsOverview == true)
         {
-            items = VisiblePrompts.Select(prompt =>
-            {
-                var item = Meta.ItemForPrompt(prompt.Id);
-                return new ClusterBuilder.Item(prompt.Id, prompt.Title, UsageScore.Score(prompt, item, DateTime.Now), item.OpenCount, false);
-            }).ToArray();
+            items = SkillClusterItems(VisibleSkills).Concat(PromptClusterItems(VisiblePrompts)).ToArray();
+        }
+        else if (SidebarSelection?.IsPrompts == true)
+        {
+            items = PromptClusterItems(VisiblePrompts);
         }
         else
         {
-            items = VisibleSkills.Select(skill =>
-            {
-                var item = Meta.ItemForSkill(skill.Id);
-                return new ClusterBuilder.Item(skill.Id, skill.Name, UsageScore.Score(skill, item, DateTime.Now), item.OpenCount, true);
-            }).ToArray();
+            items = SkillClusterItems(VisibleSkills);
         }
 
         return ClusterBuilder.Nodes(items, ClusterPrefix, looseCap);
     }
+
+    IReadOnlyList<ClusterBuilder.Item> SkillClusterItems(IReadOnlyList<SkillItem> skills) =>
+        skills.Select(skill =>
+        {
+            var item = Meta.ItemForSkill(skill.Id);
+            var used = Usage.Skill(skill);
+            return new ClusterBuilder.Item(skill.Id, skill.Name, UsageScore.Score(skill, item, used, DateTime.Now), used.Count, true);
+        }).ToArray();
+
+    IReadOnlyList<ClusterBuilder.Item> PromptClusterItems(IReadOnlyList<PromptItem> prompts) =>
+        prompts.Select(prompt =>
+        {
+            var item = Meta.ItemForPrompt(prompt.Id);
+            var used = Usage.Prompt(prompt);
+            return new ClusterBuilder.Item(prompt.Id, prompt.Title, UsageScore.Score(prompt, item, used, DateTime.Now), used.Count, false);
+        }).ToArray();
 
     void Apply(CatalogSnapshot snapshot)
     {
@@ -889,6 +937,7 @@ public sealed class CatalogStore : INotifyPropertyChanged
         Raise(nameof(Skills));
         Raise(nameof(Prompts));
         Raise(nameof(Stats));
+        Raise(nameof(Usage));
         Raise(nameof(IsScanning));
         Raise(nameof(HasLoaded));
         Raise(nameof(DuplicateSkills));

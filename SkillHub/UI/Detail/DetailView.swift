@@ -7,10 +7,10 @@ struct DetailView: View {
     var body: some View {
         @Bindable var store = store
         Group {
-            if store.sidebarSelection == .overview {
-                OverviewView()
-            } else if let document = store.currentDocument {
+            if let document = store.currentDocument {
                 DocumentView(document: document)
+            } else if store.sidebarSelection == .overview {
+                OverviewView()
             } else {
                 ClusterMapScreen(showsHint: true)
             }

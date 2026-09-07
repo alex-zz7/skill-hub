@@ -15,11 +15,11 @@ struct InstallationRow: View {
                         .foregroundStyle(installation.isBroken ? .red : installation.source.tint)
                 }
                 Text(installation.isSymlink ? "链接" : "实体")
-                    .font(.caption)
+                    .font(Theme.secondary)
                     .foregroundStyle(.secondary)
                 if installation.isBroken {
                     Text("已损坏")
-                        .font(.caption)
+                        .font(Theme.secondary)
                         .foregroundStyle(.red)
                 }
                 Spacer()
@@ -31,7 +31,7 @@ struct InstallationRow: View {
                 }
             }
             Text(abbreviated)
-                .font(.system(.caption, design: .monospaced))
+                .font(Theme.mono)
                 .foregroundStyle(.secondary)
                 .textSelection(.enabled)
                 .lineLimit(2)

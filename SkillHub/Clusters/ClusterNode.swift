@@ -14,6 +14,10 @@ nonisolated struct ClusterNode: Identifiable, Hashable, Sendable {
     let weight: Double
     let count: Int
     let openCount: Int
+    /// Most recent agent call across the node's members; nil when none were ever called.
+    var lastInvokedAt: Date? = nil
+    /// Oldest file date across members, the fallback for "stale" when nothing was ever called.
+    var modifiedAt: Date = .distantPast
 
     var isGroup: Bool {
         if case .group = kind { return true }

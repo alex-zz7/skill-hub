@@ -34,13 +34,6 @@ extension CatalogStore {
         update(document) { $0.notes = notes }
     }
 
-    func recordOpen(_ document: DocumentRef) {
-        update(document) {
-            $0.openCount += 1
-            $0.lastOpenedAt = .now
-        }
-    }
-
     func setScanProjectSkills(_ enabled: Bool) {
         guard meta.scanProjectSkills != enabled else { return }
         mutateMeta { $0.scanProjectSkills = enabled }

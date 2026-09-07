@@ -13,8 +13,8 @@ nonisolated enum DedupePolicy: Hashable, Identifiable, Sendable {
 
     var title: String {
         switch self {
-        case .keepEntity: "只留实体目录，删掉其余符号链接"
-        case .prefer(let source): "优先保留 \(source.title) 里的那一份"
+        case .keepEntity: String(localized: "只留实体目录，删掉其余符号链接")
+        case .prefer(let source): String(localized: "优先保留 \(source.title) 里的那一份")
         }
     }
 

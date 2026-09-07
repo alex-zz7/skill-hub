@@ -10,7 +10,7 @@ struct SkillInspectorView: View {
         Form {
             InspectorHeader(
                 title: skill.name,
-                subtitle: skill.description.isEmpty ? "还没有 description" : skill.description,
+                subtitle: skill.description.isEmpty ? String(localized: "还没有 description") : skill.description,
                 sources: skill.toolSources,
                 starred: store.isStarred(skillID: skill.id),
                 onToggleStar: toggleStar
@@ -29,6 +29,31 @@ struct SkillInspectorView: View {
                 }
                 LabeledContent("修改时间") {
                     Text(skill.modifiedAt, format: .dateTime.year().month().day().hour().minute())
+                }
+                LabeledContent("Agent 调用") {
+                    Text(store.usage.skill(skill).count, format: .number)
+                }
+                LabeledContent("上次调用", value: UsageScore.lastUsedText(store.usage.skill(skill).lastInvokedAt))
+            }
+
+            Section {
+                if !skill.originSummary.isEmpty {
+                    Text(skill.originSummary)
+                }
+                if !skill.author.isEmpty {
+                    LabeledContent("作者", value: skill.author)
+                }
+                if !skill.origin.isEmpty {
+                    PathRow(label: "出处", path: skill.origin)
+                }
+                ForEach(skill.sameNamePaths, id: \.self) { path in
+                    PathRow(label: "同名", path: path)
+                }
+            } header: {
+                Text("来源")
+            } footer: {
+                if !skill.sameNamePaths.isEmpty {
+                    Text("同名但不是同一个文件夹，内容可能已经不一样了。重复安装只算同一份的多个链接。")
                 }
             }
 
@@ -71,6 +96,7 @@ struct SkillInspectorView: View {
             RelatedSkillsSection(skill: skill)
         }
         .formStyle(.grouped)
+        .font(Theme.body)
     }
 
     private func toggleStar() {

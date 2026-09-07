@@ -15,6 +15,7 @@ abstract class SheetWindow : Window
         SizeToContent = SizeToContent.Height;
         WindowStartupLocation = WindowStartupLocation.CenterOwner;
         CanResize = false;
+        Background = Avalonia.Media.Brushes.White;
     }
 
     protected static StackPanel Form(params Control[] children)

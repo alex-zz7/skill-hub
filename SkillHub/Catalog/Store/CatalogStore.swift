@@ -14,6 +14,7 @@ final class CatalogStore {
     private(set) var skills: [SkillItem] = []
     private(set) var prompts: [PromptItem] = []
     private(set) var stats = OverviewStats.empty
+    private(set) var usage = UsageIndex.empty
     private(set) var meta = AppMeta.empty
     private(set) var isScanning = false
     private(set) var hasLoaded = false
@@ -23,6 +24,7 @@ final class CatalogStore {
     var selectedSkillID: SkillItem.ID?
     var selectedPromptID: PromptItem.ID?
     var searchText = ""
+    var rankMode: RankMode = .calls
     private(set) var clusterPath: [String] = []
     private(set) var mapReplayToken = 0
 
@@ -58,6 +60,7 @@ final class CatalogStore {
 
     func bootstrap() {
         meta = metaStore.load(migratingFrom: paths.legacyMetaFile)
+        usage = UsageLog.loadIndex(cacheURL: metaStore.usageCacheURL)
         refresh()
     }
 
@@ -66,12 +69,19 @@ final class CatalogStore {
         let generation = scanGeneration
         let paths = paths
         let options = scanOptions
+        let cacheURL = metaStore.usageCacheURL
         isScanning = true
         scanTask?.cancel()
         scanTask = Task {
             let snapshot = await Scanner.scan(paths: paths, options: options)
             guard generation == scanGeneration, !Task.isCancelled else { return }
             apply(snapshot)
+            let home = paths.home
+            let latest = await Task.detached {
+                UsageLog.scan(home: home, cacheURL: cacheURL)
+            }.value
+            guard generation == scanGeneration, !Task.isCancelled else { return }
+            if latest != usage { usage = latest }
         }
     }
 
@@ -105,18 +115,31 @@ final class CatalogStore {
     }
 
     var currentDocument: DocumentRef? {
-        switch sidebarSelection {
-        case .overview, .none: nil
-        case .skills: selectedSkill.map(DocumentRef.skill)
-        case .prompts: selectedPrompt.map(DocumentRef.prompt)
-        }
+        if let skill = selectedSkill { return .skill(skill) }
+        if let prompt = selectedPrompt { return .prompt(prompt) }
+        return nil
     }
 
-    func sidebarDidChange() {
+    /// User picked a sidebar row (or ⌘1/2/3). Clears the open document so that filter's map shows.
+    func chooseSidebar(_ item: SidebarItem?) {
+        guard sidebarSelection != item else { return }
+        sidebarSelection = item
         clusterPath.removeAll()
         searchText = ""
         documentMode = .preview
+        selectedSkillID = nil
+        selectedPromptID = nil
+        mapReplayToken += 1
         selectionDidChange()
+    }
+
+    /// Leaves the document so the current filter's bubble map is visible again.
+    func showClusterMap() {
+        selectedSkillID = nil
+        selectedPromptID = nil
+        documentMode = .preview
+        selectionDidChange()
+        replayMap()
     }
 
     /// Called by the view whenever the selected skill/prompt ID or sidebar changes.
@@ -130,18 +153,24 @@ final class CatalogStore {
         }
         guard loadedDocumentPath != document.filePath else { return }
         loadDocument(document)
-        recordOpen(document)
     }
 
     func select(_ document: DocumentRef) {
         switch document {
         case .skill(let skill):
-            if sidebarSelection?.isPrompts != false { sidebarSelection = .skills(.all) }
+            if sidebarSelection?.isPrompts == true {
+                sidebarSelection = .skills(.all)
+            }
+            selectedPromptID = nil
             selectedSkillID = skill.id
         case .prompt(let prompt):
-            if sidebarSelection?.isPrompts != true { sidebarSelection = .prompts(.all) }
+            if sidebarSelection?.isOverview != true && sidebarSelection?.isPrompts != true {
+                sidebarSelection = .prompts(.all)
+            }
+            selectedSkillID = nil
             selectedPromptID = prompt.id
         }
+        selectionDidChange()
     }
 
     private func loadDocument(_ document: DocumentRef) {
@@ -175,18 +204,17 @@ final class CatalogStore {
         mapReplayToken += 1
     }
 
+    /// Going up does not replay the explosion; bubbles glide to their new slots so back feels instant.
     func popCluster() {
         guard !clusterPath.isEmpty else {
             mapReplayToken += 1
             return
         }
         clusterPath.removeLast()
-        mapReplayToken += 1
     }
 
     func resetClusters() {
         clusterPath.removeAll()
-        mapReplayToken += 1
     }
 
     func replayMap() {

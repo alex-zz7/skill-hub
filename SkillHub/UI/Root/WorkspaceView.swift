@@ -21,6 +21,7 @@ struct WorkspaceView: View {
         } message: {
             Text(store.errorMessage ?? "")
         }
+        .controlSize(.large)
         .onChange(of: store.selectedSkillID) { store.selectionDidChange() }
         .onChange(of: store.selectedPromptID) { store.selectionDidChange() }
     }

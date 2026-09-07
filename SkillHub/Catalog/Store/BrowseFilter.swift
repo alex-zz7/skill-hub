@@ -6,6 +6,7 @@ nonisolated enum BrowseFilter: Hashable, Identifiable, Sendable {
     case duplicates
     case starred
     case health
+    case stale
     case standalone
     case embedded
 
@@ -16,6 +17,7 @@ nonisolated enum BrowseFilter: Hashable, Identifiable, Sendable {
         case .duplicates: "duplicates"
         case .starred: "starred"
         case .health: "health"
+        case .stale: "stale"
         case .standalone: "standalone"
         case .embedded: "embedded"
         }
@@ -23,13 +25,14 @@ nonisolated enum BrowseFilter: Hashable, Identifiable, Sendable {
 
     var title: String {
         switch self {
-        case .all: "全部"
+        case .all: String(localized: "全部")
         case .tool(let source): source.title
-        case .duplicates: "重复安装"
-        case .starred: "收藏"
-        case .health: "健康问题"
-        case .standalone: "独立文件"
-        case .embedded: "Skill 内嵌"
+        case .duplicates: String(localized: "重复安装")
+        case .starred: String(localized: "收藏")
+        case .health: String(localized: "健康问题")
+        case .stale: String(localized: "长期没用")
+        case .standalone: String(localized: "独立文件")
+        case .embedded: String(localized: "Skill 内嵌")
         }
     }
 
@@ -40,12 +43,13 @@ nonisolated enum BrowseFilter: Hashable, Identifiable, Sendable {
         case .duplicates: "square.on.square"
         case .starred: "star"
         case .health: "heart.text.square"
+        case .stale: "zzz"
         case .standalone: "doc.text"
         case .embedded: "doc.on.doc"
         }
     }
 
-    static let skillFilters: [BrowseFilter] = [.all, .starred, .duplicates, .health]
-    static let promptFilters: [BrowseFilter] = [.all, .starred, .standalone, .embedded]
+    static let skillFilters: [BrowseFilter] = [.all, .starred, .duplicates, .health, .stale]
+    static let promptFilters: [BrowseFilter] = [.all, .starred, .stale, .standalone, .embedded]
     static let promptSources: [BrowseFilter] = [.tool(.promptLibrary), .tool(.codexPrompts)]
 }

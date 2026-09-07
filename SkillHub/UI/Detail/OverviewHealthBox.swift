@@ -22,6 +22,16 @@ struct OverviewHealthBox: View {
                         .monospacedDigit()
                         .foregroundStyle(.secondary)
                 }
+                LabeledContent("同名但不是同一份") {
+                    Text(store.stats.sameNameSkills, format: .number)
+                        .monospacedDigit()
+                        .foregroundStyle(.secondary)
+                }
+                LabeledContent("超过 \(UsageScore.staleAfterDays) 天没用") {
+                    Text(store.count(for: .skills(.stale)), format: .number)
+                        .monospacedDigit()
+                        .foregroundStyle(.secondary)
+                }
 
                 if !store.duplicateSkills.isEmpty {
                     Button("一键去重 \(store.duplicateSkills.count) 个…", action: dedupe)

@@ -41,6 +41,20 @@ struct SkillHubCommands: Commands {
                 .disabled(store.clusterPrefix == nil)
             Button("重新排列气泡", action: store.replayMap)
                 .keyboardShortcut("e", modifiers: [.command, .shift])
+            Button("气泡图", action: store.showClusterMap)
+                .keyboardShortcut("m", modifiers: .command)
+                .disabled(store.currentDocument == nil)
+        }
+
+        CommandMenu("语言") {
+            Picker("语言", selection: Binding(get: { AppLanguage.current }, set: { AppLanguage.apply($0) })) {
+                ForEach(AppLanguage.allCases) { language in
+                    Text(language.title).tag(language)
+                }
+            }
+            .pickerStyle(.inline)
+            Divider()
+            Text("切换后会重新打开 Skill Hub")
         }
     }
 
@@ -63,6 +77,6 @@ struct SkillHubCommands: Commands {
     }
 
     private func show(_ item: SidebarItem) {
-        store.sidebarSelection = item
+        store.chooseSidebar(item)
     }
 }

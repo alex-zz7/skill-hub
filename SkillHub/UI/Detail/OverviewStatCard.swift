@@ -9,7 +9,7 @@ struct OverviewStatCard: View {
         GroupBox {
             VStack(alignment: .leading, spacing: 6) {
                 Label(title, systemImage: symbolName)
-                    .font(.callout)
+                    .font(Theme.body)
                     .foregroundStyle(.secondary)
                 Text(value, format: .number)
                     .font(.system(.largeTitle, design: .rounded).weight(.semibold))

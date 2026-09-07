@@ -10,7 +10,9 @@ struct PromptInspectorView: View {
         Form {
             InspectorHeader(
                 title: prompt.title,
-                subtitle: prompt.kind == .embedded ? "来自 skill「\(prompt.parentSkillName ?? "")」" : prompt.source.title,
+                subtitle: prompt.kind == .embedded
+                    ? String(localized: "来自 skill「\(prompt.parentSkillName ?? "")」")
+                    : prompt.source.title,
                 sources: [prompt.source],
                 starred: store.isStarred(promptID: prompt.id),
                 onToggleStar: toggleStar
@@ -22,6 +24,10 @@ struct PromptInspectorView: View {
                 LabeledContent("修改时间") {
                     Text(prompt.modifiedAt, format: .dateTime.year().month().day().hour().minute())
                 }
+                LabeledContent("Agent 调用") {
+                    Text(store.usage.prompt(prompt).count, format: .number)
+                }
+                LabeledContent("上次调用", value: UsageScore.lastUsedText(store.usage.prompt(prompt).lastInvokedAt))
             }
 
             ItemMetaSections(document: document)
@@ -40,6 +46,7 @@ struct PromptInspectorView: View {
             RelatedPromptsSection(prompt: prompt)
         }
         .formStyle(.grouped)
+        .font(Theme.body)
     }
 
     private func toggleStar() {

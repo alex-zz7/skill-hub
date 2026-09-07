@@ -6,68 +6,106 @@
         Width="1280"
         Height="820"
         MinWidth="960"
-        MinHeight="600">
-    <DockPanel>
-        <Border DockPanel.Dock="Top" Padding="10,8" BorderBrush="{DynamicResource SystemControlForegroundBaseLowBrush}" BorderThickness="0,0,0,1">
-            <Grid ColumnDefinitions="*,Auto">
-                <TextBlock x:Name="StatusLabel" Classes="muted" VerticalAlignment="Center" Text="准备就绪" />
-                <StackPanel Grid.Column="1" Orientation="Horizontal" Spacing="8">
-                    <Button x:Name="NewSkillButton" Content="新建 Skill" />
-                    <Button x:Name="NewPromptButton" Content="新建 Prompt" />
-                    <Button x:Name="RefreshButton" Content="刷新" />
-                    <ToggleButton x:Name="InspectorToggle" Content="检查器" IsChecked="True" />
-                </StackPanel>
-            </Grid>
-        </Border>
+        MinHeight="600"
+        Background="{DynamicResource Mac.Window}">
+    <Grid ColumnDefinitions="230,1,330,1,*,1,310">
+        <DockPanel Background="{DynamicResource Mac.Sidebar}">
+            <Border DockPanel.Dock="Bottom" Background="{DynamicResource Mac.Bar}"
+                    BorderBrush="{DynamicResource Mac.Separator}" BorderThickness="0,1,0,0" Padding="16,8">
+                <TextBlock x:Name="FooterLabel" Classes="caption" Text="0 skills · 0 prompts" />
+            </Border>
+            <ListBox x:Name="SidebarList" Classes="plain" Margin="4,8,4,4" />
+        </DockPanel>
 
-        <Grid ColumnDefinitions="230,4,320,4,*,4,300">
-            <DockPanel>
-                <Border DockPanel.Dock="Bottom" Padding="12,10" BorderBrush="{DynamicResource SystemControlForegroundBaseLowBrush}" BorderThickness="0,1,0,0">
-                    <TextBlock x:Name="FooterLabel" Classes="caption" TextWrapping="Wrap"
-                               Text="扫描用户目录下的 Cursor / Claude / Codex skills。不联网。" />
-                </Border>
-                <ListBox x:Name="SidebarList" Classes="plain" />
-            </DockPanel>
+        <Border Grid.Column="1" Background="{DynamicResource Mac.Separator}" />
 
-            <GridSplitter Grid.Column="1" Width="4" Background="Transparent" ResizeDirection="Columns" />
-
-            <DockPanel Grid.Column="2">
-                <StackPanel DockPanel.Dock="Top" Margin="10,8">
-                    <TextBox x:Name="SearchBox" Watermark="搜索名称、描述或路径" />
-                    <ItemsControl x:Name="BreadcrumbBar" Margin="0,8,0,0" IsVisible="False">
-                        <ItemsControl.ItemsPanel>
-                            <ItemsPanelTemplate>
-                                <StackPanel Orientation="Horizontal" Spacing="4" />
-                            </ItemsPanelTemplate>
-                        </ItemsControl.ItemsPanel>
-                    </ItemsControl>
-                </StackPanel>
-                <TextBlock x:Name="BrowseEmpty" Classes="muted" Margin="16" Text="这里还没有内容。" IsVisible="False" />
+        <DockPanel Grid.Column="2" Background="{DynamicResource Mac.Browse}">
+            <Border DockPanel.Dock="Top" Padding="10,8,10,6">
+                <DockPanel>
+                    <Button x:Name="RefreshButton" Classes="toolbar" DockPanel.Dock="Right" ToolTip.Tip="刷新">
+                        <StackPanel Orientation="Horizontal" Spacing="6">
+                            <local:Glyph Kind="refresh" Width="13" Height="13" />
+                            <TextBlock Text="刷新" />
+                        </StackPanel>
+                    </Button>
+                    <Button x:Name="NewMenuButton" Classes="toolbar" HorizontalAlignment="Left">
+                        <Button.Flyout>
+                            <MenuFlyout Placement="BottomEdgeAlignedLeft">
+                                <MenuItem x:Name="NewSkillItem" Header="新建 Skill…" />
+                                <MenuItem x:Name="NewPromptItem" Header="新建 Prompt…" />
+                            </MenuFlyout>
+                        </Button.Flyout>
+                        <StackPanel Orientation="Horizontal" Spacing="6">
+                            <local:Glyph Kind="plus" Width="13" Height="13" />
+                            <TextBlock Text="新建" />
+                        </StackPanel>
+                    </Button>
+                </DockPanel>
+            </Border>
+            <StackPanel DockPanel.Dock="Top" Margin="10,0,10,8">
+                <TextBox x:Name="SearchBox" Classes="search" Watermark="搜索名称、描述或路径" />
+                <ItemsControl x:Name="BreadcrumbBar" Margin="0,8,0,0" IsVisible="False">
+                    <ItemsControl.ItemsPanel>
+                        <ItemsPanelTemplate>
+                            <StackPanel Orientation="Horizontal" Spacing="4" />
+                        </ItemsPanelTemplate>
+                    </ItemsControl.ItemsPanel>
+                </ItemsControl>
+            </StackPanel>
+            <Panel>
                 <ListBox x:Name="BrowseList" Classes="plain" />
-            </DockPanel>
+                <StackPanel x:Name="BrowseEmpty" IsVisible="False" HorizontalAlignment="Center" VerticalAlignment="Center" Spacing="8">
+                    <local:Glyph Kind="tray" Width="28" Height="28" Fill="{DynamicResource Mac.Tertiary}" HorizontalAlignment="Center" />
+                    <TextBlock x:Name="BrowseEmptyTitle" Text="还没有 skill" FontSize="17" FontWeight="SemiBold" HorizontalAlignment="Center" />
+                    <TextBlock x:Name="BrowseEmptyBody" Classes="muted" Text="用工具栏里的「新建」创建一个，或者换一个筛选条件。"
+                               TextWrapping="Wrap" MaxWidth="240" TextAlignment="Center" />
+                </StackPanel>
+            </Panel>
+        </DockPanel>
 
-            <GridSplitter Grid.Column="3" Width="4" Background="Transparent" ResizeDirection="Columns" />
+        <Border Grid.Column="3" Background="{DynamicResource Mac.Separator}" />
 
-            <DockPanel Grid.Column="4">
-                <Grid DockPanel.Dock="Top" Margin="16,10" ColumnDefinitions="*,Auto">
-                    <StackPanel>
-                        <TextBlock x:Name="DetailTitle" FontSize="20" FontWeight="SemiBold" Text="总览" />
-                        <TextBlock x:Name="DetailSubtitle" Classes="caption" Margin="0,2,0,0" />
-                    </StackPanel>
-                    <StackPanel Grid.Column="1" Orientation="Horizontal" Spacing="8">
-                        <ComboBox x:Name="DocumentModeBox" Width="100" IsVisible="False">
-                            <ComboBoxItem Content="预览" Tag="Preview" />
-                            <ComboBoxItem Content="编辑" Tag="Edit" />
-                        </ComboBox>
-                        <Button x:Name="SaveButton" Content="保存" IsVisible="False" />
-                        <Button x:Name="DiscardButton" Content="丢弃" IsVisible="False" />
+        <DockPanel Grid.Column="4" Background="{DynamicResource Mac.Browse}">
+            <Border DockPanel.Dock="Top" Padding="12,7" BorderBrush="{DynamicResource Mac.Separator}" BorderThickness="0,0,0,1">
+                <Grid ColumnDefinitions="*,Auto">
+                    <TextBlock x:Name="DetailTitle" Text="总览" FontWeight="SemiBold" FontSize="13" VerticalAlignment="Center" />
+                    <StackPanel Grid.Column="1" Orientation="Horizontal" Spacing="6">
+                        <Button x:Name="BackButton" Classes="toolbar" IsVisible="False" ToolTip.Tip="返回上一层">
+                            <StackPanel Orientation="Horizontal" Spacing="4">
+                                <local:Glyph Kind="chevronLeft" Width="11" Height="11" />
+                                <TextBlock Text="返回" />
+                            </StackPanel>
+                        </Button>
+                        <Border x:Name="SegmentHost" Background="{DynamicResource Mac.Fill}" CornerRadius="7" Padding="2" IsVisible="False">
+                            <StackPanel Orientation="Horizontal">
+                                <ToggleButton x:Name="PreviewButton" Classes="segment" Content="预览" IsChecked="True" />
+                                <ToggleButton x:Name="EditButton" Classes="segment" Content="编辑" />
+                            </StackPanel>
+                        </Border>
+                        <Button x:Name="SaveButton" Classes="toolbar" IsVisible="False">
+                            <StackPanel Orientation="Horizontal" Spacing="4">
+                                <local:Glyph Kind="save" Width="12" Height="12" />
+                                <TextBlock Text="保存" />
+                            </StackPanel>
+                        </Button>
+                        <Button x:Name="MapButton" Classes="toolbar" IsVisible="False" ToolTip.Tip="回到气泡图">
+                            <StackPanel Orientation="Horizontal" Spacing="4">
+                                <local:Glyph Kind="grid" Width="12" Height="12" />
+                                <TextBlock Text="气泡图" />
+                            </StackPanel>
+                        </Button>
+                        <Button x:Name="InspectorToggle" Classes="toolbar" ToolTip.Tip="显示或隐藏详情">
+                            <local:Glyph Kind="sidebar" Width="14" Height="14" />
+                        </Button>
                     </StackPanel>
                 </Grid>
+            </Border>
+            <Grid>
                 <ScrollViewer x:Name="OverviewHost">
-                    <StackPanel Margin="16" Spacing="16" MaxWidth="1100">
+                    <StackPanel Margin="20" Spacing="20" MaxWidth="1100">
                         <UniformGrid x:Name="StatsGrid" Columns="4" />
                         <Grid x:Name="OverviewSplit" ColumnDefinitions="*,16,*" />
-                        <Border Classes="card">
+                        <Border Classes="card" Padding="14,12">
                             <DockPanel MinHeight="440">
                                 <TextBlock DockPanel.Dock="Top" FontWeight="SemiBold" Margin="0,0,0,8" Text="按名称前缀聚类" />
                                 <local:ClusterMapControl x:Name="OverviewMap" />
@@ -77,20 +115,26 @@
                 </ScrollViewer>
                 <local:ClusterMapControl x:Name="DetailMap" IsVisible="False" />
                 <ScrollViewer x:Name="PreviewHost" IsVisible="False">
-                    <StackPanel x:Name="PreviewPanel" Margin="24" MaxWidth="760" Spacing="10" />
+                    <StackPanel x:Name="PreviewPanel" Margin="28,24" MaxWidth="760" Spacing="18" HorizontalAlignment="Left" />
                 </ScrollViewer>
                 <DockPanel x:Name="EditorHost" IsVisible="False">
-                    <TextBlock DockPanel.Dock="Bottom" x:Name="EditorStatus" Classes="caption" Margin="12,6" />
-                    <TextBox x:Name="EditorBox" Classes="mono" AcceptsReturn="True" TextWrapping="Wrap"
-                             FontSize="13" BorderThickness="0" />
+                    <Border DockPanel.Dock="Bottom" Background="{DynamicResource Mac.Bar}"
+                            BorderBrush="{DynamicResource Mac.Separator}" BorderThickness="0,1,0,0" Padding="14,6">
+                        <DockPanel>
+                            <Button x:Name="DiscardButton" Classes="link" DockPanel.Dock="Right" Content="放弃修改" IsVisible="False" />
+                            <TextBlock x:Name="EditorHint" Classes="tertiary" DockPanel.Dock="Right" Margin="12,0" Text="Ctrl+S 保存" />
+                            <TextBlock x:Name="EditorStatus" Classes="caption" Text="已保存" />
+                        </DockPanel>
+                    </Border>
+                    <TextBox x:Name="EditorBox" Classes="mono" AcceptsReturn="True" TextWrapping="Wrap" FontSize="13" Padding="28,20" />
                 </DockPanel>
-            </DockPanel>
+            </Grid>
+        </DockPanel>
 
-            <GridSplitter x:Name="InspectorSplitter" Grid.Column="5" Width="4" Background="Transparent" ResizeDirection="Columns" />
+        <Border x:Name="InspectorSplitter" Grid.Column="5" Background="{DynamicResource Mac.Separator}" />
 
-            <ScrollViewer x:Name="InspectorHost" Grid.Column="6">
-                <StackPanel x:Name="InspectorPanel" Margin="14" Spacing="14" />
-            </ScrollViewer>
-        </Grid>
-    </DockPanel>
+        <ScrollViewer x:Name="InspectorHost" Grid.Column="6" Background="{DynamicResource Mac.Inspector}">
+            <StackPanel x:Name="InspectorPanel" Margin="16,18" Spacing="16" />
+        </ScrollViewer>
+    </Grid>
 </Window>

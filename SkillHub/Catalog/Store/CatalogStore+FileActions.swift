@@ -12,7 +12,7 @@ extension CatalogStore {
             try assertAllowed(url)
             try draftText.write(to: url, atomically: true, encoding: .utf8)
             loadedText = draftText
-            setStatus("已保存 \(document.title)")
+            setStatus(String(localized: "已保存 \(document.title)"))
             refresh()
         } catch {
             present(error)
@@ -43,7 +43,7 @@ extension CatalogStore {
             try Frontmatter.render(name: slug, description: description, body: "")
                 .write(to: file, atomically: true, encoding: .utf8)
             activeSheet = nil
-            setStatus("已新建 skill「\(slug)」")
+            setStatus(String(localized: "已新建 skill「\(slug)」"))
             let newID = HubPaths.realPath(folder)
             refresh { [self] in
                 sidebarSelection = .skills(.all)
@@ -65,7 +65,7 @@ extension CatalogStore {
             let text = "# \(title.trimmingCharacters(in: .whitespacesAndNewlines))\n\n\(body)\n"
             try text.write(to: file, atomically: true, encoding: .utf8)
             activeSheet = nil
-            setStatus("已新建 prompt「\(title)」")
+            setStatus(String(localized: "已新建 prompt「\(title)」"))
             let newID = HubPaths.realPath(file)
             refresh { [self] in
                 sidebarSelection = .prompts(.all)
@@ -84,7 +84,7 @@ extension CatalogStore {
             try assertAllowed(dest)
             if FileManager.default.fileExists(atPath: dest.path) { throw HubError.alreadyExists(slug) }
             try FileManager.default.copyItem(at: URL(fileURLWithPath: prompt.canonicalPath), to: dest)
-            setStatus("已另存到独立库")
+            setStatus(String(localized: "已另存到独立库"))
             let newID = HubPaths.realPath(dest)
             refresh { [self] in
                 sidebarSelection = .prompts(.all)
@@ -119,7 +119,7 @@ extension CatalogStore {
                 try fm.createSymbolicLink(at: dest, withDestinationURL: canonical)
             }
             activeSheet = nil
-            setStatus(asCopy ? "已复制到 \(source.title)" : "已链接到 \(source.title)")
+            setStatus(asCopy ? String(localized: "已复制到 \(source.title)") : String(localized: "已链接到 \(source.title)"))
             refresh()
         } catch {
             present(error)
@@ -132,7 +132,7 @@ extension CatalogStore {
         do {
             try applyDedupe(skill: skill, keep: keep)
             activeSheet = nil
-            setStatus("已只保留 \(keep.source.title) 里的「\(skill.name)」")
+            setStatus(String(localized: "已只保留 \(keep.source.title) 里的「\(skill.name)」"))
             refresh()
         } catch {
             present(error)
@@ -160,10 +160,10 @@ extension CatalogStore {
         }
         activeSheet = nil
         if let lastFailure, failed > 0 {
-            setStatus("去重完成 \(succeeded) 个，失败 \(failed) 个")
+            setStatus(String(localized: "去重完成 \(succeeded) 个，失败 \(failed) 个"))
             present(lastFailure)
         } else {
-            setStatus("已去重 \(succeeded) 个 skill")
+            setStatus(String(localized: "已去重 \(succeeded) 个 skill"))
         }
         refresh()
     }
@@ -242,23 +242,23 @@ extension CatalogStore {
             switch action {
             case .removeInstall(_, let path, let isSymlink):
                 try removeInstall(at: path, expectSymlink: isSymlink)
-                setStatus(isSymlink ? "已移除符号链接" : "已移除该安装")
+                setStatus(isSymlink ? String(localized: "已移除符号链接") : String(localized: "已移除该安装"))
             case .deleteSkill(let id, _):
                 try deleteSkillEntity(id)
                 selectedSkillID = nil
-                setStatus("已删除 skill")
+                setStatus(String(localized: "已删除 skill"))
             case .deletePrompt(let id, _):
                 try deletePrompt(id)
                 selectedPromptID = nil
-                setStatus("已删除 prompt")
+                setStatus(String(localized: "已删除 prompt"))
             case .archiveSkill(let id):
                 try archiveSkill(id)
                 selectedSkillID = nil
-                setStatus("已归档 skill")
+                setStatus(String(localized: "已归档 skill"))
             case .archivePrompt(let id):
                 try archivePrompt(id)
                 selectedPromptID = nil
-                setStatus("已归档 prompt")
+                setStatus(String(localized: "已归档 prompt"))
             }
             pendingConfirm = nil
             isShowingConfirm = false

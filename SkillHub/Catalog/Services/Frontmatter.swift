@@ -55,12 +55,17 @@ nonisolated enum Frontmatter {
         }
 
         let body = lines[index...].joined(separator: "\n").trimmingCharacters(in: .newlines)
+        let origin = ["source", "origin", "repository", "repo", "homepage", "url"]
+            .compactMap { fields[$0] }
+            .first { !$0.isEmpty } ?? ""
         return FrontmatterDocument(
             name: fields["name"] ?? "",
             description: fields["description"] ?? "",
             version: fields["version"] ?? "",
             body: body,
-            raw: raw
+            raw: raw,
+            author: fields["author"] ?? fields["maintainer"] ?? "",
+            origin: origin
         )
     }
 

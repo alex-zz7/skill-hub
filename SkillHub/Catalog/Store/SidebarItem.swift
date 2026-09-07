@@ -22,7 +22,7 @@ nonisolated enum SidebarItem: Hashable, Sendable {
 
     var title: String {
         switch self {
-        case .overview: "总览"
+        case .overview: String(localized: "总览")
         case .skills(let filter): filter == .all ? "Skills" : filter.title
         case .prompts(let filter): filter == .all ? "Prompts" : filter.title
         }

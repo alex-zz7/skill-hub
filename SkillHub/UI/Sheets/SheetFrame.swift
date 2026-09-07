@@ -3,8 +3,8 @@ import SwiftUI
 /// Standard macOS sheet chrome: title, grouped form, and a trailing Cancel / primary button row.
 struct SheetFrame<Content: View>: View {
     @Environment(\.dismiss) private var dismiss
-    let title: String
-    let primaryTitle: String
+    let title: LocalizedStringKey
+    let primaryTitle: LocalizedStringKey
     let primaryEnabled: Bool
     let primaryAction: () -> Void
     @ViewBuilder let content: Content
@@ -12,7 +12,7 @@ struct SheetFrame<Content: View>: View {
     var body: some View {
         VStack(alignment: .leading, spacing: 0) {
             Text(title)
-                .font(.title2.bold())
+                .font(.title.bold())
                 .padding(.horizontal, 20)
                 .padding(.top, 20)
                 .padding(.bottom, 8)
@@ -22,6 +22,7 @@ struct SheetFrame<Content: View>: View {
             }
             .formStyle(.grouped)
             .scrollContentBackground(.hidden)
+            .font(Theme.body)
 
             HStack {
                 Spacer()
@@ -32,9 +33,10 @@ struct SheetFrame<Content: View>: View {
                     .buttonStyle(.borderedProminent)
                     .disabled(!primaryEnabled)
             }
+            .controlSize(.large)
             .padding(20)
         }
-        .frame(width: 480)
+        .frame(width: 520)
     }
 
     private func cancel() {

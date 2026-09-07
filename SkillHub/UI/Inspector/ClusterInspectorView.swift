@@ -17,7 +17,7 @@ struct ClusterInspectorView: View {
             } header: {
                 Text("浏览")
             } footer: {
-                Text("气泡大小按使用频率：打开次数、收藏、装到几个工具。同名前缀会合并成一类，点开可以继续往下。")
+                Text("气泡大小按使用频率：agent 调用次数、收藏、装到几个工具。同名前缀会合并成一类，点开可以继续往下。")
             }
 
             if !store.duplicateSkills.isEmpty {
@@ -34,6 +34,7 @@ struct ClusterInspectorView: View {
             }
         }
         .formStyle(.grouped)
+        .font(Theme.body)
     }
 
     private func dedupe() {

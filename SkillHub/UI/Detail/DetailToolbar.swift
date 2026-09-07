@@ -20,6 +20,9 @@ struct DetailToolbar: ToolbarContent {
                 Button("保存", systemImage: "square.and.arrow.down", action: store.saveDraft)
                     .disabled(!store.isDirty)
                     .help("保存修改 (⌘S)")
+
+                Button("气泡图", systemImage: "circle.hexagongrid", action: store.showClusterMap)
+                    .help("回到当前分类的气泡图")
             } else if store.sidebarSelection != .overview || store.clusterPrefix != nil {
                 Button("返回上一层", systemImage: "chevron.left", action: store.popCluster)
                     .disabled(store.clusterPrefix == nil)

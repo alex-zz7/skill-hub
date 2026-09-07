@@ -149,8 +149,10 @@ public sealed record ScanOptions(bool ScanProjectSkills = false, IReadOnlyList<s
 public sealed record CatalogSnapshot(
     IReadOnlyList<SkillItem> Skills,
     IReadOnlyList<PromptItem> Prompts,
-    IReadOnlyList<Installation> BrokenOrphans)
+    IReadOnlyList<Installation> BrokenOrphans,
+    UsageIndex? Usage = null)
 {
+    public UsageIndex UsageIndex => Usage ?? UsageIndex.Empty;
     public static CatalogSnapshot Empty { get; } = new([], [], []);
 }
 

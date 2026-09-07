@@ -8,8 +8,8 @@ nonisolated enum DocumentMode: String, CaseIterable, Identifiable, Sendable {
 
     var title: String {
         switch self {
-        case .preview: "预览"
-        case .edit: "编辑"
+        case .preview: String(localized: "预览")
+        case .edit: String(localized: "编辑")
         }
     }
 

@@ -7,6 +7,8 @@ nonisolated enum ClusterBuilder {
         var weight: Double
         var openCount: Int
         var isSkill: Bool
+        var lastInvokedAt: Date? = nil
+        var modifiedAt: Date = .distantPast
     }
 
     /// Groups `items` one level below `parent`. Singletons never form a group; they stay loose.
@@ -48,7 +50,9 @@ nonisolated enum ClusterBuilder {
                     kind: .group(prefix: key, memberIDs: members.map(\.id)),
                     weight: members.reduce(0) { $0 + $1.weight },
                     count: members.count,
-                    openCount: members.reduce(0) { $0 + $1.openCount }
+                    openCount: members.reduce(0) { $0 + $1.openCount },
+                    lastInvokedAt: members.compactMap(\.lastInvokedAt).max(),
+                    modifiedAt: members.map(\.modifiedAt).max() ?? .distantPast
                 )
             )
         }
@@ -63,7 +67,9 @@ nonisolated enum ClusterBuilder {
                 kind: item.isSkill ? .skill(item.id) : .prompt(item.id),
                 weight: item.weight,
                 count: 1,
-                openCount: item.openCount
+                openCount: item.openCount,
+                lastInvokedAt: item.lastInvokedAt,
+                modifiedAt: item.modifiedAt
             )
         }
         return groups + singleNodes

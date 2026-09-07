@@ -14,6 +14,7 @@ public sealed class MetaStore
     };
 
     public string FilePath { get; }
+    public string UsageCachePath => Path.Combine(Path.GetDirectoryName(FilePath) ?? Path.GetTempPath(), "usage-cache.json");
 
     public MetaStore(string filePath)
     {

@@ -17,6 +17,9 @@ public sealed class ClusterMapControl : Control
     public static readonly StyledProperty<int> NucleusCountProperty =
         AvaloniaProperty.Register<ClusterMapControl, int>(nameof(NucleusCount));
 
+    public static readonly StyledProperty<bool> CanGoUpProperty =
+        AvaloniaProperty.Register<ClusterMapControl, bool>(nameof(CanGoUp));
+
     public IReadOnlyList<ClusterNode>? Nodes
     {
         get => GetValue(NodesProperty);
@@ -35,6 +38,12 @@ public sealed class ClusterMapControl : Control
         set => SetValue(NucleusCountProperty, value);
     }
 
+    public bool CanGoUp
+    {
+        get => GetValue(CanGoUpProperty);
+        set => SetValue(CanGoUpProperty, value);
+    }
+
     public event Action<ClusterNode>? NodeActivated;
     public event Action? NucleusActivated;
 
@@ -42,7 +51,7 @@ public sealed class ClusterMapControl : Control
 
     static ClusterMapControl()
     {
-        AffectsRender<ClusterMapControl>(NodesProperty, NucleusTitleProperty, NucleusCountProperty);
+        AffectsRender<ClusterMapControl>(NodesProperty, NucleusTitleProperty, NucleusCountProperty, CanGoUpProperty);
     }
 
     protected override Size ArrangeOverride(Size finalSize)
@@ -61,16 +70,17 @@ public sealed class ClusterMapControl : Control
         }
     }
 
-    void Relayout(Size size)
-    {
-        var nodes = Nodes ?? [];
-        _placements = ClusterLayout.Plan(nodes, new MapSize(size.Width, size.Height));
-    }
+    void Relayout(Size size) =>
+        _placements = ClusterLayout.Plan(Nodes ?? [], new MapSize(size.Width, size.Height));
 
     public override void Render(DrawingContext context)
     {
-        var nodes = Nodes ?? [];
-        foreach (var node in nodes)
+        if (Bounds.Width > 40 && Bounds.Height > 40 && (Nodes?.Count ?? 0) > 0 && _placements.Count == 0)
+        {
+            Relayout(Bounds.Size);
+        }
+
+        foreach (var node in Nodes ?? [])
         {
             if (!_placements.TryGetValue(node.Id, out var slot))
             {
@@ -78,35 +88,66 @@ public sealed class ClusterMapControl : Control
             }
 
             var radius = slot.Diameter / 2;
-            var origin = new Point(slot.Center.X - radius, slot.Center.Y - radius);
-            var rect = new Rect(origin, new Size(slot.Diameter, slot.Diameter));
-            context.DrawEllipse(ColorUtil.ClusterSoft(node.Title), new Pen(ColorUtil.Cluster(node.Title), 1.4), rect.Center, radius, radius);
-
-            var typeface = new Typeface(FontFamily.Default, FontStyle.Normal, node.IsGroup ? FontWeight.SemiBold : FontWeight.Medium);
-            var title = Truncate(node.Title, radius > 40 ? 14 : 10);
-            var titleLayout = new FormattedText(title, System.Globalization.CultureInfo.CurrentCulture, FlowDirection.LeftToRight, typeface, radius > 40 ? 13 : 11, ColorUtil.Cluster(node.Title));
-            context.DrawText(titleLayout, new Point(slot.Center.X - titleLayout.Width / 2, slot.Center.Y - 10));
-
-            var caption = node.IsGroup ? $"{node.Count}" : "";
-            if (caption.Length > 0)
+            var center = new Point(slot.Center.X, slot.Center.Y);
+            var color = Color.Parse(ThemeTint.ForKey(node.Title));
+            var fill = new LinearGradientBrush
             {
-                var cap = new FormattedText(caption, System.Globalization.CultureInfo.CurrentCulture, FlowDirection.LeftToRight, Typeface.Default, 10, Brushes.Gray);
-                context.DrawText(cap, new Point(slot.Center.X - cap.Width / 2, slot.Center.Y + 8));
+                StartPoint = new RelativePoint(0.5, 0, RelativeUnit.Relative),
+                EndPoint = new RelativePoint(0.5, 1, RelativeUnit.Relative),
+                GradientStops =
+                {
+                    new GradientStop(Lighten(color, 0.22), 0),
+                    new GradientStop(color, 1)
+                }
+            };
+            context.DrawEllipse(fill, new Pen(new SolidColorBrush(Colors.White, 0.28), 1), center, radius, radius);
+
+            var title = Truncate(node.Title.Replace('-', ' '), radius > 40 ? 16 : 10);
+            var titleSize = Math.Clamp(slot.Diameter * 0.15, 12, 20);
+            var titleLayout = new FormattedText(title, System.Globalization.CultureInfo.CurrentCulture, FlowDirection.LeftToRight, new Typeface(FontFamily.Default, FontStyle.Normal, FontWeight.SemiBold), titleSize, Brushes.White);
+            context.DrawText(titleLayout, new Point(center.X - titleLayout.Width / 2, center.Y - (node.IsGroup ? 12 : 8)));
+            if (node.IsGroup)
+            {
+                var cap = new FormattedText(node.Count.ToString(), System.Globalization.CultureInfo.CurrentCulture, FlowDirection.LeftToRight, new Typeface(FontFamily.Default, FontStyle.Normal, FontWeight.Medium), Math.Clamp(slot.Diameter * 0.11, 11, 15), new SolidColorBrush(Colors.White, 0.9));
+                context.DrawText(cap, new Point(center.X - cap.Width / 2, center.Y + 8));
             }
         }
 
         var nucleus = ClusterLayout.NucleusDiameter(new MapSize(Bounds.Width, Bounds.Height));
-        var center = new Point(Bounds.Width / 2, Bounds.Height / 2);
+        var origin = new Point(Bounds.Width / 2, Bounds.Height / 2);
         context.DrawEllipse(
-            new SolidColorBrush(Color.Parse("#0A84FF")) { Opacity = 0.12 },
-            new Pen(ColorUtil.Brush("#0A84FF"), 1.5),
-            center,
+            new SolidColorBrush(Color.Parse("#F2F2F7"), 0.92),
+            new Pen(new SolidColorBrush(Color.Parse("#D8D8DC")), 1),
+            origin,
             nucleus / 2,
             nucleus / 2);
-        var name = new FormattedText(Truncate(NucleusTitle, 16), System.Globalization.CultureInfo.CurrentCulture, FlowDirection.LeftToRight, new Typeface(FontFamily.Default, FontStyle.Normal, FontWeight.SemiBold), 13, Brushes.DodgerBlue);
-        context.DrawText(name, new Point(center.X - name.Width / 2, center.Y - 12));
-        var count = new FormattedText($"{NucleusCount} 个", System.Globalization.CultureInfo.CurrentCulture, FlowDirection.LeftToRight, Typeface.Default, 11, Brushes.Gray);
-        context.DrawText(count, new Point(center.X - count.Width / 2, center.Y + 8));
+
+        var count = new FormattedText(
+            NucleusCount.ToString(),
+            System.Globalization.CultureInfo.CurrentCulture,
+            FlowDirection.LeftToRight,
+            new Typeface(FontFamily.Default, FontStyle.Normal, FontWeight.Bold),
+            nucleus * 0.26,
+            new SolidColorBrush(Color.Parse("#1D1D1F")));
+        context.DrawText(count, new Point(origin.X - count.Width / 2, origin.Y - nucleus * 0.28));
+
+        var name = new FormattedText(
+            Truncate(NucleusTitle.Replace('-', ' '), 16),
+            System.Globalization.CultureInfo.CurrentCulture,
+            FlowDirection.LeftToRight,
+            new Typeface(FontFamily.Default, FontStyle.Normal, FontWeight.Medium),
+            Math.Max(12, nucleus * 0.11),
+            new SolidColorBrush(Color.Parse("#1D1D1F")));
+        context.DrawText(name, new Point(origin.X - name.Width / 2, origin.Y - 2));
+
+        var hint = new FormattedText(
+            CanGoUp ? "返回" : "重排",
+            System.Globalization.CultureInfo.CurrentCulture,
+            FlowDirection.LeftToRight,
+            Typeface.Default,
+            10,
+            new SolidColorBrush(Color.Parse("#6E6E73")));
+        context.DrawText(hint, new Point(origin.X - hint.Width / 2, origin.Y + nucleus * 0.16));
     }
 
     protected override void OnPointerPressed(PointerPressedEventArgs e)
@@ -135,6 +176,12 @@ public sealed class ClusterMapControl : Control
             }
         }
     }
+
+    static Color Lighten(Color color, double amount) =>
+        Color.FromRgb(
+            (byte)Math.Min(255, color.R + (255 - color.R) * amount),
+            (byte)Math.Min(255, color.G + (255 - color.G) * amount),
+            (byte)Math.Min(255, color.B + (255 - color.B) * amount));
 
     static double Distance(Point a, Point b)
     {

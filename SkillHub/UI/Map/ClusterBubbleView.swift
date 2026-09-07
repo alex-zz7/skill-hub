@@ -9,11 +9,18 @@ struct ClusterBubbleView: View {
 
     private var tint: Color { Theme.tint(for: node.title) }
 
+    /// Long-unused bubbles wash out so the map reads as "what can go" instead of just "what exists".
+    private var staleness: Double {
+        UsageScore.staleness(lastInvokedAt: node.lastInvokedAt, modifiedAt: node.modifiedAt)
+    }
+
     var body: some View {
         Button(action: action) {
             ZStack {
                 Circle()
                     .fill(tint.gradient)
+                    .saturation(1 - staleness * 0.8)
+                    .opacity(1 - staleness * 0.35)
                     .overlay {
                         Circle().strokeBorder(.white.opacity(isHovering ? 0.9 : 0.25), lineWidth: isHovering ? 2 : 1)
                     }
@@ -41,12 +48,19 @@ struct ClusterBubbleView: View {
         .buttonStyle(BubbleButtonStyle())
         .onHover { isHovering = $0 }
         .animation(Theme.quick, value: isHovering)
-        .help(node.isGroup ? "\(node.title) · \(node.count) 个，点开这一类" : node.title)
-        .accessibilityLabel(node.isGroup ? "\(node.title)，\(node.count) 个" : node.title)
+        .help(helpText)
+        .accessibilityLabel(node.isGroup ? Text("\(node.title)，\(node.count) 个") : Text(node.title))
         .accessibilityHint(node.isGroup ? "打开这一类" : "打开")
     }
 
     private var displayTitle: String {
         node.title.replacingOccurrences(of: "-", with: " ")
+    }
+
+    private var helpText: String {
+        let recent = UsageScore.lastUsedText(node.lastInvokedAt)
+        return node.isGroup
+            ? String(localized: "\(node.title) · \(node.count) 个 · \(recent)，点开这一类")
+            : "\(node.title) · \(recent)"
     }
 }

@@ -108,10 +108,10 @@ asc screenshots list --app "$APP_ID" --version 1.0.0 --output json | jq -r '.dat
 英文截图直接复用中文图并换标题（en-US 和 en-GB 共用一套）：
 
 ```bash
-swift scripts/compose-screenshot.swift docs/app-store/screenshots/raw/02-skills-map.png  docs/app-store/screenshots/en/01-map.png      "Every skill, at a glance"        "Scans Cursor, Claude Code, Codex and more; clusters by name prefix" 0.62
-swift scripts/compose-screenshot.swift docs/app-store/screenshots/raw/03-skill-detail.png docs/app-store/screenshots/en/02-detail.png   "Read, edit, save — in one place" "Rendered Markdown preview, edit SKILL.md in place, paths and installs in the inspector" 0.08
-swift scripts/compose-screenshot.swift docs/app-store/screenshots/raw/01-overview.png     docs/app-store/screenshots/en/03-overview.png "Duplicates and broken links, gone" "Per-tool counts, health checks, one-click dedupe" 0.35
-swift scripts/compose-screenshot.swift docs/app-store/screenshots/raw/04-prompt-detail.png docs/app-store/screenshots/en/04-prompts.png "Prompts, managed too"           "Embedded and standalone prompts: star, tag, save a copy" 0.78
+swift scripts/compose-screenshot.swift docs/app-store/screenshots/raw/02-skills-map.png  docs/app-store/screenshots/en/01-map.png      "Every skill, at a glance"        "Ranked by agent calls on the left, explosion map on the right" 0.62
+swift scripts/compose-screenshot.swift docs/app-store/screenshots/raw/03-skill-detail.png docs/app-store/screenshots/en/02-detail.png   "Read, edit, save — in one place" "Rendered Markdown preview; the inspector shows real agent calls" 0.08
+swift scripts/compose-screenshot.swift docs/app-store/screenshots/raw/01-overview.png     docs/app-store/screenshots/en/03-overview.png "Overview you can click"         "Skills and Prompts in one map; duplicates and broken links, gone" 0.35
+swift scripts/compose-screenshot.swift docs/app-store/screenshots/raw/04-prompt-detail.png docs/app-store/screenshots/en/04-prompts.png "Prompts get a map too"          "Standalone and embedded: star, tag, save a copy" 0.78
 ```
 
 网页里还要手动点三处（API 不支持）：**定价**（建议先免费）、**年龄分级问卷**（全选无）、**App 隐私 › 不收集数据**。

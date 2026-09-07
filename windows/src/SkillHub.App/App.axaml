@@ -2,19 +2,105 @@
              xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
              x:Class="SkillHub.App.App"
              RequestedThemeVariant="Default">
+    <Application.Resources>
+        <ResourceDictionary>
+            <FontFamily x:Key="Mac.Font">Inter, SF Pro Text, Segoe UI Variable Display, Segoe UI</FontFamily>
+            <FontFamily x:Key="Mac.Mono">SF Mono, Cascadia Mono, Menlo, Consolas, monospace</FontFamily>
+            <ResourceDictionary.ThemeDictionaries>
+                <ResourceDictionary x:Key="Default">
+                    <Color x:Key="Mac.WindowColor">#FFFFFF</Color>
+                    <Color x:Key="Mac.SidebarColor">#E8E8EA</Color>
+                    <Color x:Key="Mac.BrowseColor">#FFFFFF</Color>
+                    <Color x:Key="Mac.InspectorColor">#F2F2F7</Color>
+                    <Color x:Key="Mac.SeparatorColor">#D8D8DC</Color>
+                    <Color x:Key="Mac.BarColor">#F4F4F6</Color>
+                    <Color x:Key="Mac.FillColor">#E5E5EA</Color>
+                    <Color x:Key="Mac.CardColor">#FFFFFF</Color>
+                    <Color x:Key="Mac.TextColor">#1D1D1F</Color>
+                    <Color x:Key="Mac.SecondaryColor">#6E6E73</Color>
+                    <Color x:Key="Mac.TertiaryColor">#8E8E93</Color>
+                    <Color x:Key="Mac.AccentColor">#007AFF</Color>
+                    <Color x:Key="Mac.SelectionTextColor">#FFFFFF</Color>
+                    <SolidColorBrush x:Key="Mac.Window" Color="{StaticResource Mac.WindowColor}" />
+                    <SolidColorBrush x:Key="Mac.Sidebar" Color="{StaticResource Mac.SidebarColor}" />
+                    <SolidColorBrush x:Key="Mac.Browse" Color="{StaticResource Mac.BrowseColor}" />
+                    <SolidColorBrush x:Key="Mac.Inspector" Color="{StaticResource Mac.InspectorColor}" />
+                    <SolidColorBrush x:Key="Mac.Separator" Color="{StaticResource Mac.SeparatorColor}" />
+                    <SolidColorBrush x:Key="Mac.Bar" Color="{StaticResource Mac.BarColor}" />
+                    <SolidColorBrush x:Key="Mac.Fill" Color="{StaticResource Mac.FillColor}" />
+                    <SolidColorBrush x:Key="Mac.Card" Color="{StaticResource Mac.CardColor}" />
+                    <SolidColorBrush x:Key="Mac.Text" Color="{StaticResource Mac.TextColor}" />
+                    <SolidColorBrush x:Key="Mac.Secondary" Color="{StaticResource Mac.SecondaryColor}" />
+                    <SolidColorBrush x:Key="Mac.Tertiary" Color="{StaticResource Mac.TertiaryColor}" />
+                    <SolidColorBrush x:Key="Mac.Accent" Color="{StaticResource Mac.AccentColor}" />
+                    <SolidColorBrush x:Key="Mac.SelectionText" Color="{StaticResource Mac.SelectionTextColor}" />
+                </ResourceDictionary>
+                <ResourceDictionary x:Key="Dark">
+                    <Color x:Key="Mac.WindowColor">#1C1C1E</Color>
+                    <Color x:Key="Mac.SidebarColor">#2C2C2E</Color>
+                    <Color x:Key="Mac.BrowseColor">#1C1C1E</Color>
+                    <Color x:Key="Mac.InspectorColor">#2C2C2E</Color>
+                    <Color x:Key="Mac.SeparatorColor">#3A3A3C</Color>
+                    <Color x:Key="Mac.BarColor">#2C2C2E</Color>
+                    <Color x:Key="Mac.FillColor">#3A3A3C</Color>
+                    <Color x:Key="Mac.CardColor">#3A3A3C</Color>
+                    <Color x:Key="Mac.TextColor">#F5F5F7</Color>
+                    <Color x:Key="Mac.SecondaryColor">#98989D</Color>
+                    <Color x:Key="Mac.TertiaryColor">#6E6E73</Color>
+                    <Color x:Key="Mac.AccentColor">#0A84FF</Color>
+                    <Color x:Key="Mac.SelectionTextColor">#FFFFFF</Color>
+                    <SolidColorBrush x:Key="Mac.Window" Color="{StaticResource Mac.WindowColor}" />
+                    <SolidColorBrush x:Key="Mac.Sidebar" Color="{StaticResource Mac.SidebarColor}" />
+                    <SolidColorBrush x:Key="Mac.Browse" Color="{StaticResource Mac.BrowseColor}" />
+                    <SolidColorBrush x:Key="Mac.Inspector" Color="{StaticResource Mac.InspectorColor}" />
+                    <SolidColorBrush x:Key="Mac.Separator" Color="{StaticResource Mac.SeparatorColor}" />
+                    <SolidColorBrush x:Key="Mac.Bar" Color="{StaticResource Mac.BarColor}" />
+                    <SolidColorBrush x:Key="Mac.Fill" Color="{StaticResource Mac.FillColor}" />
+                    <SolidColorBrush x:Key="Mac.Card" Color="{StaticResource Mac.CardColor}" />
+                    <SolidColorBrush x:Key="Mac.Text" Color="{StaticResource Mac.TextColor}" />
+                    <SolidColorBrush x:Key="Mac.Secondary" Color="{StaticResource Mac.SecondaryColor}" />
+                    <SolidColorBrush x:Key="Mac.Tertiary" Color="{StaticResource Mac.TertiaryColor}" />
+                    <SolidColorBrush x:Key="Mac.Accent" Color="{StaticResource Mac.AccentColor}" />
+                    <SolidColorBrush x:Key="Mac.SelectionText" Color="{StaticResource Mac.SelectionTextColor}" />
+                </ResourceDictionary>
+            </ResourceDictionary.ThemeDictionaries>
+        </ResourceDictionary>
+    </Application.Resources>
     <Application.Styles>
         <FluentTheme />
+        <Style Selector="Window">
+            <Setter Property="FontFamily" Value="{StaticResource Mac.Font}" />
+            <Setter Property="FontSize" Value="13" />
+            <Setter Property="Background" Value="{DynamicResource Mac.Window}" />
+            <Setter Property="Foreground" Value="{DynamicResource Mac.Text}" />
+        </Style>
         <Style Selector="TextBlock.muted">
-            <Setter Property="Foreground" Value="{DynamicResource SystemControlForegroundBaseMediumBrush}" />
+            <Setter Property="Foreground" Value="{DynamicResource Mac.Secondary}" />
         </Style>
         <Style Selector="TextBlock.caption">
             <Setter Property="FontSize" Value="12" />
-            <Setter Property="Foreground" Value="{DynamicResource SystemControlForegroundBaseMediumBrush}" />
+            <Setter Property="Foreground" Value="{DynamicResource Mac.Secondary}" />
+        </Style>
+        <Style Selector="TextBlock.tertiary">
+            <Setter Property="FontSize" Value="11" />
+            <Setter Property="Foreground" Value="{DynamicResource Mac.Tertiary}" />
+        </Style>
+        <Style Selector="TextBlock.section">
+            <Setter Property="FontSize" Value="11" />
+            <Setter Property="FontWeight" Value="SemiBold" />
+            <Setter Property="Foreground" Value="{DynamicResource Mac.Secondary}" />
         </Style>
         <Style Selector="Border.card">
-            <Setter Property="Background" Value="{DynamicResource SystemControlBackgroundChromeMediumLowBrush}" />
+            <Setter Property="Background" Value="{DynamicResource Mac.Card}" />
+            <Setter Property="BorderBrush" Value="{DynamicResource Mac.Separator}" />
+            <Setter Property="BorderThickness" Value="1" />
             <Setter Property="CornerRadius" Value="8" />
             <Setter Property="Padding" Value="14" />
+        </Style>
+        <Style Selector="Border.form">
+            <Setter Property="Background" Value="{DynamicResource Mac.Card}" />
+            <Setter Property="CornerRadius" Value="10" />
+            <Setter Property="Padding" Value="12,10" />
         </Style>
         <Style Selector="Border.badge">
             <Setter Property="CornerRadius" Value="8" />
@@ -23,9 +109,84 @@
         <Style Selector="ListBox.plain">
             <Setter Property="Background" Value="Transparent" />
             <Setter Property="BorderThickness" Value="0" />
+            <Setter Property="Padding" Value="0" />
+        </Style>
+        <Style Selector="ListBox.plain ListBoxItem">
+            <Setter Property="Padding" Value="0" />
+            <Setter Property="Margin" Value="6,1" />
+            <Setter Property="Background" Value="Transparent" />
+            <Setter Property="MinHeight" Value="0" />
+        </Style>
+        <Style Selector="ListBox.plain ListBoxItem:selected /template/ ContentPresenter">
+            <Setter Property="Background" Value="{DynamicResource Mac.Accent}" />
+            <Setter Property="CornerRadius" Value="6" />
+            <Setter Property="TextBlock.Foreground" Value="{DynamicResource Mac.SelectionText}" />
+        </Style>
+        <Style Selector="ListBox.plain ListBoxItem:pointerover /template/ ContentPresenter">
+            <Setter Property="Background" Value="{DynamicResource Mac.Fill}" />
+            <Setter Property="CornerRadius" Value="6" />
+        </Style>
+        <Style Selector="ListBox.plain ListBoxItem:selected:pointerover /template/ ContentPresenter">
+            <Setter Property="Background" Value="{DynamicResource Mac.Accent}" />
+        </Style>
+        <Style Selector="Button.toolbar">
+            <Setter Property="Background" Value="Transparent" />
+            <Setter Property="BorderThickness" Value="0" />
+            <Setter Property="Padding" Value="8,4" />
+            <Setter Property="CornerRadius" Value="6" />
+            <Setter Property="Foreground" Value="{DynamicResource Mac.Text}" />
+        </Style>
+        <Style Selector="Button.toolbar:pointerover">
+            <Setter Property="Background" Value="{DynamicResource Mac.Fill}" />
+        </Style>
+        <Style Selector="Button.link">
+            <Setter Property="Background" Value="Transparent" />
+            <Setter Property="BorderThickness" Value="0" />
+            <Setter Property="Padding" Value="0" />
+            <Setter Property="Foreground" Value="{DynamicResource Mac.Accent}" />
+        </Style>
+        <Style Selector="Button.destructive">
+            <Setter Property="Foreground" Value="#FF3B30" />
+            <Setter Property="Background" Value="Transparent" />
+            <Setter Property="BorderThickness" Value="0" />
+            <Setter Property="HorizontalAlignment" Value="Left" />
+            <Setter Property="Padding" Value="0,4" />
+        </Style>
+        <Style Selector="Button.action">
+            <Setter Property="Background" Value="Transparent" />
+            <Setter Property="BorderThickness" Value="0" />
+            <Setter Property="HorizontalAlignment" Value="Stretch" />
+            <Setter Property="HorizontalContentAlignment" Value="Left" />
+            <Setter Property="Padding" Value="0,5" />
+            <Setter Property="Foreground" Value="{DynamicResource Mac.Accent}" />
+        </Style>
+        <Style Selector="TextBox.search">
+            <Setter Property="Background" Value="{DynamicResource Mac.Fill}" />
+            <Setter Property="BorderThickness" Value="0" />
+            <Setter Property="CornerRadius" Value="8" />
+            <Setter Property="Padding" Value="10,6" />
+            <Setter Property="MinHeight" Value="28" />
+        </Style>
+        <Style Selector="TextBox.ghost">
+            <Setter Property="Background" Value="Transparent" />
+            <Setter Property="BorderThickness" Value="0" />
+            <Setter Property="Padding" Value="0,4" />
         </Style>
         <Style Selector="TextBox.mono">
-            <Setter Property="FontFamily" Value="Cascadia Mono, Consolas, Menlo, monospace" />
+            <Setter Property="FontFamily" Value="{StaticResource Mac.Mono}" />
+            <Setter Property="Background" Value="Transparent" />
+            <Setter Property="BorderThickness" Value="0" />
+        </Style>
+        <Style Selector="ToggleButton.segment">
+            <Setter Property="Background" Value="Transparent" />
+            <Setter Property="BorderThickness" Value="0" />
+            <Setter Property="Padding" Value="10,4" />
+            <Setter Property="CornerRadius" Value="6" />
+            <Setter Property="MinHeight" Value="24" />
+        </Style>
+        <Style Selector="ToggleButton.segment:checked">
+            <Setter Property="Background" Value="{DynamicResource Mac.Card}" />
+            <Setter Property="FontWeight" Value="SemiBold" />
         </Style>
     </Application.Styles>
 </Application>

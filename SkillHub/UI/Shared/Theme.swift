@@ -7,6 +7,16 @@ enum Theme {
     static let mapMinHeight: CGFloat = 440
     static let readingWidth: CGFloat = 760
 
+    // Type scale. The system default body on macOS is 13pt, which is too small for a dense
+    // browsing UI, so every list, form and helper line uses these instead of .caption/.footnote.
+    static let body = Font.system(size: 15)
+    static let rowTitle = Font.system(size: 16, weight: .semibold)
+    static let secondary = Font.system(size: 13.5)
+    static let tertiary = Font.system(size: 12.5)
+    static let mono = Font.system(size: 13, design: .monospaced)
+    static let sidebar = Font.system(size: 15)
+    static let hint = Font.system(size: 13.5)
+
     /// Critically damped: no overshoot, settles cleanly. Used for anything the user did not fling.
     static let settle = Animation.spring(duration: 0.5, bounce: 0)
     static let quick = Animation.spring(duration: 0.22, bounce: 0)

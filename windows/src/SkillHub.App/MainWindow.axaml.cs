@@ -14,6 +14,7 @@ public partial class MainWindow : Window
     readonly List<SidebarItem> _sidebarItems = [];
     bool _suppressBrowse;
     bool _inspectorVisible = true;
+    bool _syncingMode;
 
     public MainWindow()
         : this(new CatalogStore(new HubPaths(Environment.GetFolderPath(Environment.SpecialFolder.UserProfile))))
@@ -25,33 +26,52 @@ public partial class MainWindow : Window
         _store = store;
         InitializeComponent();
         KeyDown += OnKeyDown;
-        NewSkillButton.Click += (_, _) => OpenSheet(HubSheet.NewSkill);
-        NewPromptButton.Click += (_, _) => OpenSheet(HubSheet.NewPrompt);
+        NewSkillItem.Click += (_, _) => OpenSheet(HubSheet.NewSkill);
+        NewPromptItem.Click += (_, _) => OpenSheet(HubSheet.NewPrompt);
         RefreshButton.Click += (_, _) => _store.Refresh();
-        InspectorToggle.IsCheckedChanged += (_, _) =>
+        InspectorToggle.Click += (_, _) =>
         {
-            _inspectorVisible = InspectorToggle.IsChecked == true;
+            _inspectorVisible = !_inspectorVisible;
             InspectorHost.IsVisible = _inspectorVisible;
             InspectorSplitter.IsVisible = _inspectorVisible;
         };
+        BackButton.Click += (_, _) => _store.PopCluster();
+        PreviewButton.IsCheckedChanged += (_, _) =>
+        {
+            if (_syncingMode || PreviewButton.IsChecked != true)
+            {
+                return;
+            }
+
+            _store.DocumentMode = DocumentMode.Preview;
+        };
+        EditButton.IsCheckedChanged += (_, _) =>
+        {
+            if (_syncingMode || EditButton.IsChecked != true)
+            {
+                return;
+            }
+
+            _store.DocumentMode = DocumentMode.Edit;
+        };
+        SaveButton.Click += (_, _) => _store.SaveDraft();
+        MapButton.Click += (_, _) => _store.ShowClusterMap();
+        DiscardButton.Click += (_, _) => _store.DiscardDraft();
         SearchBox.TextChanged += (_, _) => _store.SearchText = SearchBox.Text ?? "";
         SidebarList.SelectionChanged += OnSidebarChanged;
         BrowseList.SelectionChanged += OnBrowseChanged;
-        DocumentModeBox.SelectionChanged += OnDocumentModeChanged;
-        SaveButton.Click += (_, _) => _store.SaveDraft();
-        DiscardButton.Click += (_, _) => _store.DiscardDraft();
         EditorBox.TextChanged += (_, _) =>
         {
             if (EditorHost.IsVisible)
             {
                 _store.DraftText = EditorBox.Text ?? "";
-                EditorStatus.Text = _store.IsDirty ? "未保存的更改" : "已与磁盘同步";
+                RefreshEditorChrome();
             }
         };
         OverviewMap.NodeActivated += _store.Open;
-        OverviewMap.NucleusActivated += _store.PopCluster;
+        OverviewMap.NucleusActivated += OnNucleus;
         DetailMap.NodeActivated += _store.Open;
-        DetailMap.NucleusActivated += _store.PopCluster;
+        DetailMap.NucleusActivated += OnNucleus;
 
         BuildSidebar();
         _store.PropertyChanged += (_, e) => Dispatcher.UIThread.Post(() => OnStoreChanged(e.PropertyName));
@@ -64,6 +84,18 @@ public partial class MainWindow : Window
         };
         _store.Bootstrap();
         RefreshAll();
+    }
+
+    void OnNucleus()
+    {
+        if (_store.ClusterPrefix != null)
+        {
+            _store.PopCluster();
+        }
+        else
+        {
+            _store.ReplayMap();
+        }
     }
 
     void OnKeyDown(object? sender, KeyEventArgs e)
@@ -120,14 +152,20 @@ public partial class MainWindow : Window
             return;
         }
 
+        if (name is nameof(CatalogStore.DraftText) or nameof(CatalogStore.IsDirty) or nameof(CatalogStore.LoadedText))
+        {
+            RefreshEditorChrome();
+            return;
+        }
+
         RefreshAll();
     }
 
     void RefreshAll()
     {
-        StatusLabel.Text = _store.IsScanning
+        FooterLabel.Text = _store.IsScanning
             ? "正在扫描…"
-            : _store.StatusMessage ?? $"{_store.Skills.Count} 个 skill · {_store.Prompts.Count} 个 prompt";
+            : $"{_store.Stats.UniqueSkills} skills · {_store.Stats.UniquePrompts} prompts";
         RefreshButton.IsEnabled = !_store.IsScanning;
         RefreshSidebarCounts();
         RefreshBrowse();
@@ -135,28 +173,39 @@ public partial class MainWindow : Window
         RefreshInspector();
     }
 
+    void RefreshEditorChrome()
+    {
+        SaveButton.IsVisible = _store.CurrentDocument != null && _store.DocumentMode == DocumentMode.Edit;
+        SaveButton.IsEnabled = _store.IsDirty;
+        DiscardButton.IsVisible = _store.IsDirty;
+        EditorStatus.Text = _store.IsDirty ? "有未保存的修改" : "已保存";
+        EditorStatus.Foreground = _store.IsDirty ? Brushes.Orange : null;
+    }
+
     void BuildSidebar()
     {
         _sidebarItems.Clear();
         SidebarList.Items.Clear();
-            AddSidebar(SidebarItem.OverviewItem, "总览");
+        AddSidebar(SidebarItem.OverviewItem, "总览", "pie");
         AddHeader("Skills");
-        foreach (var filter in BrowseFilter.SkillFilters)
-        {
-            AddSidebar(new SidebarItem.Skills(filter), filter.Title);
-        }
-
-        AddHeader("按工具");
-        foreach (var source in ToolSourceInfo.SkillRoots)
-        {
-            AddSidebar(new SidebarItem.Skills(new BrowseFilter.Tool(source)), source.Title());
-        }
-
+        AddSidebar(new SidebarItem.Skills(BrowseFilter.AllFilter), "全部", "grid");
+        AddSidebar(new SidebarItem.Skills(BrowseFilter.StarredFilter), "收藏", "star");
+        AddSidebar(new SidebarItem.Skills(BrowseFilter.DuplicatesFilter), "重复安装", "dup");
+        AddSidebar(new SidebarItem.Skills(BrowseFilter.HealthFilter), "健康问题", "health");
         AddHeader("Prompts");
-        foreach (var filter in BrowseFilter.PromptFilters.Concat(BrowseFilter.PromptSources))
-        {
-            AddSidebar(new SidebarItem.Prompts(filter), filter.Title);
-        }
+        AddSidebar(new SidebarItem.Prompts(BrowseFilter.AllFilter), "全部", "grid");
+        AddSidebar(new SidebarItem.Prompts(BrowseFilter.StarredFilter), "收藏", "star");
+        AddSidebar(new SidebarItem.Prompts(BrowseFilter.StandaloneFilter), "独立文件", "doc");
+        AddSidebar(new SidebarItem.Prompts(BrowseFilter.EmbeddedFilter), "Skill 内嵌", "docs");
+        AddHeader("按工具");
+        AddSidebar(new SidebarItem.Skills(new BrowseFilter.Tool(ToolSource.CursorUser)), "Cursor", "cursor");
+        AddSidebar(new SidebarItem.Skills(new BrowseFilter.Tool(ToolSource.CursorBuiltin)), "Cursor 内置", "cursor");
+        AddSidebar(new SidebarItem.Skills(new BrowseFilter.Tool(ToolSource.Claude)), "Claude", "spark");
+        AddSidebar(new SidebarItem.Skills(new BrowseFilter.Tool(ToolSource.Codex)), "Codex", "code");
+        AddSidebar(new SidebarItem.Skills(new BrowseFilter.Tool(ToolSource.Agents)), "Agents", "people");
+        AddSidebar(new SidebarItem.Skills(new BrowseFilter.Tool(ToolSource.Proma)), "Proma", "wand");
+        AddSidebar(new SidebarItem.Prompts(new BrowseFilter.Tool(ToolSource.PromptLibrary)), "Skill Hub 库", "books");
+        AddSidebar(new SidebarItem.Prompts(new BrowseFilter.Tool(ToolSource.CodexPrompts)), "Codex Prompts", "quote");
 
         for (var i = 0; i < SidebarList.ItemCount; i++)
         {
@@ -173,31 +222,34 @@ public partial class MainWindow : Window
         SidebarList.Items.Add(new ListBoxItem
         {
             IsEnabled = false,
+            Padding = new Thickness(0),
             Content = new TextBlock
             {
                 Text = title,
-                FontSize = 11,
-                FontWeight = FontWeight.SemiBold,
-                Opacity = 0.6,
-                Margin = new Thickness(8, 12, 8, 4)
+                Classes = { "section" },
+                Margin = new Thickness(10, 14, 8, 4)
             }
         });
         _sidebarItems.Add(SidebarItem.OverviewItem);
     }
 
-    void AddSidebar(SidebarItem item, string title)
+    void AddSidebar(SidebarItem item, string title, string icon)
     {
         _sidebarItems.Add(item);
-        var row = new DockPanel { Margin = new Thickness(4, 2) };
+        var row = new DockPanel { Margin = new Thickness(8, 5) };
         var count = new TextBlock
         {
             Name = "Count",
             Classes = { "caption" },
-            VerticalAlignment = VerticalAlignment.Center
+            VerticalAlignment = VerticalAlignment.Center,
+            Margin = new Thickness(8, 0, 0, 0)
         };
         DockPanel.SetDock(count, Dock.Right);
         row.Children.Add(count);
-        row.Children.Add(new TextBlock { Text = title, VerticalAlignment = VerticalAlignment.Center });
+        var label = new StackPanel { Orientation = Orientation.Horizontal, Spacing = 8 };
+        label.Children.Add(Glyph.Make(icon, 13));
+        label.Children.Add(new TextBlock { Text = title, VerticalAlignment = VerticalAlignment.Center });
+        row.Children.Add(label);
         row.Tag = item;
         SidebarList.Items.Add(new ListBoxItem { Content = row, Tag = item });
     }
@@ -213,10 +265,12 @@ public partial class MainWindow : Window
             }
 
             var count = panel.Children.OfType<TextBlock>().FirstOrDefault(t => t.Name == "Count");
-            if (count != null)
+            if (count == null)
             {
-                count.Text = _store.CountFor(item).ToString();
+                continue;
             }
+
+            count.Text = item.IsOverview ? "" : _store.CountFor(item).ToString();
         }
     }
 
@@ -239,32 +293,34 @@ public partial class MainWindow : Window
         BrowseList.Items.Clear();
         RefreshBreadcrumb();
 
-        if (_store.SidebarSelection is SidebarItem.Overview)
+        var rows = _store.RankedClusterRows;
+        var noun = _store.SidebarSelection?.IsOverview == true
+            ? "条目"
+            : _store.SidebarSelection?.IsPrompts == true
+                ? "prompt"
+                : "skill";
+        foreach (var row in rows)
         {
-            foreach (var row in _store.RankedClusterRows)
-            {
-                BrowseList.Items.Add(MakeClusterRow(row));
-            }
-
-            BrowseEmpty.IsVisible = _store.RankedClusterRows.Count == 0;
+            BrowseList.Items.Add(MakeClusterRow(row));
         }
-        else if (_store.SidebarSelection?.IsPrompts == true)
-        {
-            foreach (var prompt in _store.VisiblePrompts)
-            {
-                BrowseList.Items.Add(MakePromptRow(prompt));
-            }
 
-            BrowseEmpty.IsVisible = _store.VisiblePrompts.Count == 0;
+        var empty = rows.Count == 0;
+        BrowseEmpty.IsVisible = empty;
+        BrowseList.IsVisible = !empty;
+        if (_store.IsSearching)
+        {
+            BrowseEmptyTitle.Text = "没有匹配的结果";
+            BrowseEmptyBody.Text = $"找不到「{_store.SearchText}」。";
+        }
+        else if (_store.ClusterPrefix != null)
+        {
+            BrowseEmptyTitle.Text = "这一类是空的";
+            BrowseEmptyBody.Text = "返回上一层，或换一个分类。";
         }
         else
         {
-            foreach (var skill in _store.VisibleSkills)
-            {
-                BrowseList.Items.Add(MakeSkillRow(skill));
-            }
-
-            BrowseEmpty.IsVisible = _store.VisibleSkills.Count == 0;
+            BrowseEmptyTitle.Text = $"还没有 {noun}";
+            BrowseEmptyBody.Text = "用工具栏里的「新建」创建一个，或者换一个筛选条件。";
         }
 
         _suppressBrowse = false;
@@ -280,45 +336,54 @@ public partial class MainWindow : Window
         }
 
         BreadcrumbBar.IsVisible = true;
-        var root = new Button { Content = _store.SidebarSelection?.Title ?? "全部" };
+        var root = ToolbarText(_store.SidebarSelection?.Title ?? "全部");
         root.Click += (_, _) => _store.ResetClusters();
         BreadcrumbBar.Items.Add(root);
         for (var i = 0; i < _store.ClusterPath.Count; i++)
         {
-            BreadcrumbBar.Items.Add(new TextBlock { Text = "›", VerticalAlignment = VerticalAlignment.Center, Opacity = 0.5 });
+            BreadcrumbBar.Items.Add(new TextBlock
+            {
+                Text = "›",
+                Classes = { "tertiary" },
+                VerticalAlignment = VerticalAlignment.Center
+            });
             var prefix = string.Join('-', _store.ClusterPath.Take(i + 1));
-            var button = new Button { Content = _store.ClusterPath[i] };
+            var button = ToolbarText(_store.ClusterPath[i]);
             button.Click += (_, _) => _store.OpenCluster(prefix);
             BreadcrumbBar.Items.Add(button);
         }
     }
 
+    static Button ToolbarText(string text)
+    {
+        var button = new Button { Content = text, Classes = { "toolbar" } };
+        return button;
+    }
+
     ListBoxItem MakeSkillRow(SkillItem skill)
     {
-        var block = new StackPanel { Spacing = 4, Margin = new Thickness(8, 6) };
-        var title = new DockPanel();
-        var flags = new StackPanel { Orientation = Orientation.Horizontal, Spacing = 6 };
-        DockPanel.SetDock(flags, Dock.Right);
+        var block = new StackPanel { Spacing = 4, Margin = new Thickness(10, 7) };
+        var title = new StackPanel { Orientation = Orientation.Horizontal, Spacing = 6 };
+        title.Children.Add(new TextBlock { Text = skill.Name, FontWeight = FontWeight.SemiBold, FontSize = 13 });
         if (_store.IsStarredSkill(skill.Id))
         {
-            flags.Children.Add(new TextBlock { Text = "★", Foreground = Brushes.Goldenrod });
+            title.Children.Add(Glyph.Make("star", 11, Brushes.Gold));
         }
 
         if (skill.Health.Count > 0)
         {
-            flags.Children.Add(new TextBlock { Text = "⚠", Foreground = Brushes.Orange });
+            title.Children.Add(Glyph.Make("warning", 11, Brushes.Orange));
         }
 
-        title.Children.Add(flags);
-        title.Children.Add(new TextBlock { Text = skill.Name, FontWeight = FontWeight.SemiBold });
         block.Children.Add(title);
         block.Children.Add(new TextBlock
         {
             Text = string.IsNullOrEmpty(skill.Description) ? "还没有 description" : skill.Description,
             Classes = { "caption" },
-            TextWrapping = TextWrapping.Wrap
+            TextWrapping = TextWrapping.Wrap,
+            MaxLines = 2
         });
-        var badges = new StackPanel { Orientation = Orientation.Horizontal, Spacing = 6 };
+        var badges = new StackPanel { Orientation = Orientation.Horizontal, Spacing = 4 };
         foreach (var source in skill.ToolSources)
         {
             badges.Children.Add(Badge(source.Title(), ColorUtil.Tool(source), ColorUtil.Soft(source)));
@@ -326,7 +391,7 @@ public partial class MainWindow : Window
 
         if (skill.IsDuplicateInstall)
         {
-            badges.Children.Add(new TextBlock { Text = $"{skill.Installations.Count} 处", Classes = { "caption" } });
+            badges.Children.Add(new TextBlock { Text = $"{skill.Installations.Count} 处", Classes = { "tertiary" }, VerticalAlignment = VerticalAlignment.Center });
         }
 
         block.Children.Add(badges);
@@ -335,51 +400,58 @@ public partial class MainWindow : Window
 
     ListBoxItem MakePromptRow(PromptItem prompt)
     {
-        var block = new StackPanel { Spacing = 4, Margin = new Thickness(8, 6) };
-        var title = new DockPanel();
+        var block = new StackPanel { Spacing = 4, Margin = new Thickness(10, 7) };
+        var title = new StackPanel { Orientation = Orientation.Horizontal, Spacing = 6 };
+        title.Children.Add(new TextBlock { Text = prompt.Title, FontWeight = FontWeight.SemiBold, FontSize = 13 });
         if (_store.IsStarredPrompt(prompt.Id))
         {
-            var star = new TextBlock { Text = "★", Foreground = Brushes.Goldenrod };
-            DockPanel.SetDock(star, Dock.Right);
-            title.Children.Add(star);
+            title.Children.Add(Glyph.Make("star", 11, Brushes.Gold));
         }
 
-        title.Children.Add(new TextBlock { Text = prompt.Title, FontWeight = FontWeight.SemiBold });
         block.Children.Add(title);
         var meta = new StackPanel { Orientation = Orientation.Horizontal, Spacing = 6 };
         meta.Children.Add(Badge(prompt.Kind.Title(), ColorUtil.Tool(prompt.Source), ColorUtil.Soft(prompt.Source)));
-        if (prompt.ParentSkillName != null)
+        meta.Children.Add(new TextBlock
         {
-            meta.Children.Add(new TextBlock { Text = prompt.ParentSkillName, Classes = { "caption" } });
-        }
-        else
-        {
-            meta.Children.Add(new TextBlock { Text = prompt.Source.Title(), Classes = { "caption" } });
-        }
-
+            Text = prompt.ParentSkillName ?? prompt.Source.Title(),
+            Classes = { "caption" },
+            VerticalAlignment = VerticalAlignment.Center
+        });
         block.Children.Add(meta);
         return new ListBoxItem { Content = block, Tag = prompt };
     }
 
     ListBoxItem MakeClusterRow(ClusterRankedRow row)
     {
+        var tint = ColorUtil.Cluster(row.Node.Title);
+        var head = new DockPanel();
+        if (row.Node.IsGroup)
+        {
+            var trail = new StackPanel { Orientation = Orientation.Horizontal, Spacing = 6 };
+            trail.Children.Add(new TextBlock { Text = row.Node.Count.ToString(), Classes = { "caption" }, VerticalAlignment = VerticalAlignment.Center });
+            trail.Children.Add(Glyph.Make("chevronRight", 10));
+            DockPanel.SetDock(trail, Dock.Right);
+            head.Children.Add(trail);
+        }
+
+        var label = new StackPanel { Orientation = Orientation.Horizontal, Spacing = 8 };
+        label.Children.Add(Glyph.Make(row.Node.IsGroup ? "folder" : "doc", 13, tint));
+        label.Children.Add(new TextBlock { Text = row.Node.Title, FontWeight = FontWeight.SemiBold, VerticalAlignment = VerticalAlignment.Center });
+        head.Children.Add(label);
+
         var bar = new Border
         {
-            Height = 4,
-            CornerRadius = new CornerRadius(2),
+            Height = 3,
+            CornerRadius = new CornerRadius(1.5),
             Background = ColorUtil.ClusterSoft(row.Node.Title),
-            Width = 40 + row.Fraction * 180,
-            HorizontalAlignment = HorizontalAlignment.Left,
-            Margin = new Thickness(0, 4, 0, 0)
+            Width = 48 + row.Fraction * 160,
+            HorizontalAlignment = HorizontalAlignment.Left
         };
-        var block = new StackPanel { Margin = new Thickness(8, 6), Spacing = 2 };
-        block.Children.Add(new TextBlock
-        {
-            Text = $"{row.Rank}. {row.Node.Title}",
-            FontWeight = row.Node.IsGroup ? FontWeight.SemiBold : FontWeight.Medium
-        });
-        block.Children.Add(new TextBlock { Text = _store.Caption(row.Node), Classes = { "caption" } });
+
+        var block = new StackPanel { Margin = new Thickness(10, 7), Spacing = 6 };
+        block.Children.Add(head);
         block.Children.Add(bar);
+        block.Children.Add(new TextBlock { Text = _store.Caption(row.Node), Classes = { "caption" } });
         return new ListBoxItem { Content = block, Tag = row.Node };
     }
 
@@ -408,52 +480,57 @@ public partial class MainWindow : Window
     {
         var document = _store.CurrentDocument;
         var overview = _store.SidebarSelection is SidebarItem.Overview;
-        OverviewHost.IsVisible = overview;
-        var showDocument = document != null && !overview;
-        DocumentModeBox.IsVisible = showDocument;
+        var showDocument = document != null;
+        OverviewHost.IsVisible = overview && !showDocument;
+        SegmentHost.IsVisible = showDocument;
+        SegmentHost.IsEnabled = document is not { IsReadOnly: true };
         SaveButton.IsVisible = showDocument && _store.DocumentMode == DocumentMode.Edit;
-        DiscardButton.IsVisible = showDocument && _store.IsDirty;
+        SaveButton.IsEnabled = _store.IsDirty;
         PreviewHost.IsVisible = showDocument && _store.DocumentMode == DocumentMode.Preview;
         EditorHost.IsVisible = showDocument && _store.DocumentMode == DocumentMode.Edit;
-        DetailMap.IsVisible = !overview && document == null;
-
+        DetailMap.IsVisible = !showDocument && !overview;
+        MapButton.IsVisible = showDocument;
+        BackButton.IsVisible = !showDocument && _store.ClusterPrefix != null;
         DetailTitle.Text = document?.Title ?? _store.SidebarSelection?.Title ?? "Skill Hub";
-        DetailSubtitle.Text = document?.Subtitle ?? _store.StatusMessage ?? "";
 
-        if (overview)
+        _syncingMode = true;
+        PreviewButton.IsChecked = _store.DocumentMode == DocumentMode.Preview;
+        EditButton.IsChecked = _store.DocumentMode == DocumentMode.Edit;
+        _syncingMode = false;
+
+        if (showDocument && _store.DocumentMode == DocumentMode.Preview)
         {
-            RebuildOverview();
+            RebuildPreview(document!);
         }
-        else if (document != null && _store.DocumentMode == DocumentMode.Preview)
-        {
-            RebuildPreview(document);
-        }
-        else if (document != null && _store.DocumentMode == DocumentMode.Edit)
+        else if (showDocument && _store.DocumentMode == DocumentMode.Edit)
         {
             if (EditorBox.Text != _store.DraftText)
             {
                 EditorBox.Text = _store.DraftText;
             }
 
-            EditorStatus.Text = _store.IsDirty ? "未保存的更改" : "已与磁盘同步";
+            RefreshEditorChrome();
+        }
+        else if (overview)
+        {
+            RebuildOverview();
         }
         else
         {
             DetailMap.Nodes = _store.ClusterNodesForMap;
             DetailMap.NucleusTitle = _store.ClusterTitle;
             DetailMap.NucleusCount = _store.ClusterItemCount;
+            DetailMap.CanGoUp = _store.ClusterPrefix != null;
         }
-
-        DocumentModeBox.SelectedIndex = _store.DocumentMode == DocumentMode.Edit ? 1 : 0;
     }
 
     void RebuildOverview()
     {
         StatsGrid.Children.Clear();
-        AddStat("Skills", _store.Stats.UniqueSkills);
-        AddStat("Prompts", _store.Stats.UniquePrompts);
-        AddStat("重复安装", _store.Stats.DuplicateSkills);
-        AddStat("符号链接", _store.Stats.SymlinkInstalls);
+        AddStat("Skills", _store.Stats.UniqueSkills, "docs");
+        AddStat("Prompts", _store.Stats.UniquePrompts, "quote");
+        AddStat("重复安装", _store.Stats.DuplicateSkills, "dup");
+        AddStat("符号链接", _store.Stats.SymlinkInstalls, "link");
 
         OverviewSplit.Children.Clear();
         var tools = new Border { Classes = { "card" } };
@@ -465,7 +542,18 @@ public partial class MainWindow : Window
             var count = new TextBlock { Text = _store.Stats.ByTool.GetValueOrDefault(source).ToString(), Classes = { "caption" } };
             DockPanel.SetDock(count, Dock.Right);
             row.Children.Add(count);
-            row.Children.Add(new TextBlock { Text = source.Title(), Foreground = ColorUtil.Tool(source) });
+            var label = new StackPanel { Orientation = Orientation.Horizontal, Spacing = 8 };
+            label.Children.Add(Glyph.Make(source switch
+            {
+                ToolSource.CursorUser or ToolSource.CursorBuiltin => "cursor",
+                ToolSource.Claude => "spark",
+                ToolSource.Codex => "code",
+                ToolSource.Agents => "people",
+                ToolSource.Proma => "wand",
+                _ => "folder"
+            }, 12, ColorUtil.Tool(source)));
+            label.Children.Add(new TextBlock { Text = source.Title() });
+            row.Children.Add(label);
             toolStack.Children.Add(row);
         }
 
@@ -481,14 +569,16 @@ public partial class MainWindow : Window
         healthStack.Children.Add(Labeled("重复安装", _store.Stats.DuplicateSkills.ToString()));
         if (_store.DuplicateSkills.Count > 0)
         {
-            var dedupe = new Button { Content = $"一键去重 {_store.DuplicateSkills.Count} 个…" };
+            var dedupe = new Button { Content = $"一键去重 {_store.DuplicateSkills.Count} 个…", Classes = { "action" } };
             dedupe.Click += (_, _) => OpenSheet(HubSheet.Dedupe);
             healthStack.Children.Add(dedupe);
         }
 
         var scanProjects = new CheckBox
         {
-            Content = "同时扫描 ~/Projects 里各项目的 skill",
+            Content = OperatingSystem.IsWindows()
+                ? @"同时扫描 %USERPROFILE%\Projects 里各项目的 skill"
+                : "同时扫描 ~/Projects 里各项目的 skill",
             IsChecked = _store.Meta.ScanProjectSkills
         };
         scanProjects.IsCheckedChanged += (_, _) => _store.SetScanProjectSkills(scanProjects.IsChecked == true);
@@ -500,14 +590,18 @@ public partial class MainWindow : Window
         OverviewMap.Nodes = _store.ClusterNodesForMap;
         OverviewMap.NucleusTitle = _store.ClusterTitle;
         OverviewMap.NucleusCount = _store.ClusterItemCount;
+        OverviewMap.CanGoUp = _store.ClusterPrefix != null;
     }
 
-    void AddStat(string title, int value)
+    void AddStat(string title, int value, string icon)
     {
-        var card = new Border { Classes = { "card" }, Margin = new Thickness(0, 0, 8, 0) };
-        var stack = new StackPanel();
-        stack.Children.Add(new TextBlock { Text = title, Classes = { "caption" } });
-        stack.Children.Add(new TextBlock { Text = value.ToString(), FontSize = 26, FontWeight = FontWeight.SemiBold });
+        var card = new Border { Classes = { "card" }, Margin = new Thickness(0, 0, 10, 0) };
+        var stack = new StackPanel { Spacing = 6 };
+        var label = new StackPanel { Orientation = Orientation.Horizontal, Spacing = 6 };
+        label.Children.Add(Glyph.Make(icon, 12));
+        label.Children.Add(new TextBlock { Text = title, Classes = { "caption" } });
+        stack.Children.Add(label);
+        stack.Children.Add(new TextBlock { Text = value.ToString(), FontSize = 28, FontWeight = FontWeight.SemiBold });
         card.Child = stack;
         StatsGrid.Children.Add(card);
     }
@@ -515,15 +609,41 @@ public partial class MainWindow : Window
     void RebuildPreview(DocumentRef document)
     {
         PreviewPanel.Children.Clear();
+        var header = new StackPanel { Spacing = 8 };
+        var titleRow = new DockPanel();
+        titleRow.Children.Add(Badge(document.PrimarySource.Title(), ColorUtil.Tool(document.PrimarySource), ColorUtil.Soft(document.PrimarySource)));
+        DockPanel.SetDock(titleRow.Children[0], Dock.Right);
+        titleRow.Children.Add(new TextBlock
+        {
+            Text = document.Title,
+            FontSize = 28,
+            FontWeight = FontWeight.Bold,
+            TextWrapping = TextWrapping.Wrap
+        });
+        header.Children.Add(titleRow);
+        if (!string.IsNullOrEmpty(document.Subtitle))
+        {
+            header.Children.Add(new TextBlock
+            {
+                Text = document.Subtitle,
+                FontSize = 17,
+                Classes = { "muted" },
+                TextWrapping = TextWrapping.Wrap
+            });
+        }
+
+        PreviewPanel.Children.Add(header);
+        PreviewPanel.Children.Add(new Separator());
+
         var blocks = MarkdownParser.SkippingRedundantTitle(MarkdownParser.Blocks(_store.DraftText), document.Title);
         foreach (var block in blocks)
         {
             PreviewPanel.Children.Add(RenderBlock(block));
         }
 
-        if (PreviewPanel.Children.Count == 0)
+        if (blocks.Count == 0)
         {
-            PreviewPanel.Children.Add(new TextBlock { Text = "这份文件还是空的。", Classes = { "muted" } });
+            PreviewPanel.Children.Add(new TextBlock { Text = "这个文件是空的。切换到「编辑」开始写。", Classes = { "muted" } });
         }
     }
 
@@ -532,27 +652,27 @@ public partial class MainWindow : Window
         MarkdownBlock.Heading h => new TextBlock
         {
             Text = h.Text,
-            FontSize = h.Level == 1 ? 26 : h.Level == 2 ? 20 : 16,
+            FontSize = h.Level == 1 ? 24 : h.Level == 2 ? 19 : 15,
             FontWeight = FontWeight.SemiBold,
             TextWrapping = TextWrapping.Wrap,
-            Margin = new Thickness(0, h.Level == 1 ? 8 : 4, 0, 2)
+            Margin = new Thickness(0, h.Level == 1 ? 6 : 2, 0, 0)
         },
-        MarkdownBlock.Paragraph p => new TextBlock { Text = p.Text, TextWrapping = TextWrapping.Wrap },
+        MarkdownBlock.Paragraph p => new TextBlock { Text = p.Text, TextWrapping = TextWrapping.Wrap, LineHeight = 22 },
         MarkdownBlock.Bullets b => BulletList(b.Items, false),
         MarkdownBlock.Numbered n => BulletList(n.Items, true),
         MarkdownBlock.Code c => new Border
         {
             Classes = { "card" },
-            Child = new TextBlock
+            Child = new SelectableTextBlock
             {
                 Text = c.Text,
-                FontFamily = new FontFamily("Cascadia Mono, Consolas, Menlo, monospace"),
+                FontFamily = new FontFamily("SF Mono, Cascadia Mono, Menlo, Consolas, monospace"),
                 TextWrapping = TextWrapping.Wrap
             }
         },
         MarkdownBlock.Quote q => new Border
         {
-            BorderBrush = Brushes.Gray,
+            BorderBrush = new SolidColorBrush(Color.Parse("#8E8E93")),
             BorderThickness = new Thickness(3, 0, 0, 0),
             Padding = new Thickness(10, 0, 0, 0),
             Child = new TextBlock { Text = q.Text, FontStyle = FontStyle.Italic, TextWrapping = TextWrapping.Wrap }
@@ -564,7 +684,7 @@ public partial class MainWindow : Window
 
     static Control BulletList(IReadOnlyList<string> items, bool numbered)
     {
-        var stack = new StackPanel { Spacing = 3 };
+        var stack = new StackPanel { Spacing = 4 };
         for (var i = 0; i < items.Count; i++)
         {
             stack.Children.Add(new TextBlock
@@ -602,7 +722,7 @@ public partial class MainWindow : Window
         {
             for (var c = 0; c < table.Rows[r].Count && c < table.Header.Count; c++)
             {
-                var cell = new TextBlock { Text = table.Rows[r][c], Margin = new Thickness(6) };
+                var cell = new TextBlock { Text = table.Rows[r][c], Margin = new Thickness(6), TextWrapping = TextWrapping.Wrap };
                 Grid.SetRow(cell, r + 1);
                 Grid.SetColumn(cell, c);
                 grid.Children.Add(cell);
@@ -610,18 +730,6 @@ public partial class MainWindow : Window
         }
 
         return new Border { Classes = { "card" }, Child = grid, Padding = new Thickness(4) };
-    }
-
-    void OnDocumentModeChanged(object? sender, SelectionChangedEventArgs e)
-    {
-        if (DocumentModeBox.SelectedIndex == 1)
-        {
-            _store.DocumentMode = DocumentMode.Edit;
-        }
-        else if (DocumentModeBox.SelectedIndex == 0)
-        {
-            _store.DocumentMode = DocumentMode.Preview;
-        }
     }
 
     void RefreshInspector()
@@ -635,32 +743,48 @@ public partial class MainWindow : Window
         {
             BuildPromptInspector(promptRef.Item);
         }
-        else if (_store.SidebarSelection is SidebarItem.Overview)
-        {
-            InspectorPanel.Children.Add(new TextBlock { Text = "总览", FontSize = 18, FontWeight = FontWeight.SemiBold });
-            InspectorPanel.Children.Add(new TextBlock
-            {
-                Text = "点中间列表或气泡图里的一项，这里会显示路径、安装位置和操作。",
-                Classes = { "muted" },
-                TextWrapping = TextWrapping.Wrap
-            });
-        }
         else
         {
-            InspectorPanel.Children.Add(new TextBlock { Text = "未选择", FontSize = 18, FontWeight = FontWeight.SemiBold });
-            InspectorPanel.Children.Add(new TextBlock
+            BuildClusterInspector();
+        }
+    }
+
+    void BuildClusterInspector()
+    {
+        InspectorPanel.Children.Add(FormSection("浏览",
+            Labeled("当前范围", _store.SidebarSelection?.Title ?? "Skills"),
+            _store.ClusterPrefix == null ? new TextBlock() : Labeled("聚类前缀", _store.ClusterPrefix),
+            Labeled("条目", _store.ClusterItemCount.ToString()),
+            new TextBlock
             {
-                Text = "从中间列表选一个 skill 或 prompt。",
-                Classes = { "muted" }
-            });
+                Text = "气泡大小按使用频率：agent 调用次数、收藏、装到几个工具。同名前缀会合并成一类，点开可以继续往下。",
+                Classes = { "caption" },
+                TextWrapping = TextWrapping.Wrap,
+                Margin = new Thickness(0, 4, 0, 0)
+            }));
+
+        if (_store.DuplicateSkills.Count > 0)
+        {
+            var dedupe = new Button { Content = $"一键去重 {_store.DuplicateSkills.Count} 个…", Classes = { "action" } };
+            dedupe.Click += (_, _) => OpenSheet(HubSheet.Dedupe);
+            InspectorPanel.Children.Add(FormSection("整理", dedupe));
+        }
+
+        if (_store.ClusterPrefix != null)
+        {
+            var back = new Button { Content = "返回上一层", Classes = { "action" } };
+            back.Click += (_, _) => _store.PopCluster();
+            var top = new Button { Content = "回到顶层", Classes = { "action" } };
+            top.Click += (_, _) => _store.ResetClusters();
+            InspectorPanel.Children.Add(FormSection("导航", back, top));
         }
     }
 
     void BuildSkillInspector(SkillItem skill)
     {
         var document = new DocumentRef.Skill(skill);
-        InspectorPanel.Children.Add(InspectorHeader(skill.Name, string.IsNullOrEmpty(skill.Description) ? "还没有 description" : skill.Description, skill.ToolSources, _store.IsStarredSkill(skill.Id), () => _store.ToggleStar(document)));
-        InspectorPanel.Children.Add(Section("位置",
+        InspectorPanel.Children.Add(FormSection(null, InspectorHeader(skill.Name, string.IsNullOrEmpty(skill.Description) ? "还没有 description" : skill.Description, skill.ToolSources, _store.IsStarredSkill(skill.Id), () => _store.ToggleStar(document))));
+        InspectorPanel.Children.Add(FormSection("位置",
             PathRow("SKILL.md", skill.SkillFilePath),
             Labeled("文件", $"{skill.FileCount} 个"),
             Labeled("修改时间", skill.ModifiedAt.ToString("yyyy-MM-dd HH:mm"))));
@@ -671,7 +795,7 @@ public partial class MainWindow : Window
             var row = new DockPanel();
             if (entry.Source.IsWritable())
             {
-                var remove = new Button { Content = "移除", Margin = new Thickness(8, 0, 0, 0) };
+                var remove = new Button { Content = "移除", Classes = { "link" }, Margin = new Thickness(8, 0, 0, 0) };
                 var captured = entry;
                 remove.Click += (_, _) => _store.Request(new ConfirmAction.RemoveInstall(skill.Id, captured.Path, captured.IsSymlink));
                 DockPanel.SetDock(remove, Dock.Right);
@@ -685,132 +809,139 @@ public partial class MainWindow : Window
             installs.Children.Add(row);
         }
 
-        InspectorPanel.Children.Add(Section("安装位置", installs));
+        InspectorPanel.Children.Add(FormSection("安装位置", installs));
         if (skill.Health.Count > 0)
         {
-            InspectorPanel.Children.Add(Section("健康", skill.Health.Select(issue =>
-                new TextBlock { Text = "⚠ " + issue.Title(), Foreground = Brushes.Orange }).Cast<Control>().ToArray()));
+            InspectorPanel.Children.Add(FormSection("健康", skill.Health.Select(issue =>
+                (Control)new TextBlock { Text = issue.Title(), Foreground = Brushes.Orange }).ToArray()));
         }
 
         AddMetaSections(document);
-        var actions = new StackPanel { Spacing = 6 };
-        var installButton = new Button { Content = "安装到其他工具…" };
-        installButton.IsEnabled = !skill.IsReadOnly && _store.AvailableInstallTargets(skill).Count > 0;
-        installButton.Click += (_, _) => OpenSheet(HubSheet.Install);
-        actions.Children.Add(installButton);
+        var actions = new StackPanel { Spacing = 2 };
+        actions.Children.Add(ActionButton("安装到其他工具…", () => OpenSheet(HubSheet.Install), !skill.IsReadOnly && _store.AvailableInstallTargets(skill).Count > 0));
         if (_store.DuplicateSkills.Count > 0)
         {
-            var dedupe = new Button { Content = $"一键去重 {_store.DuplicateSkills.Count} 个…" };
-            dedupe.Click += (_, _) => OpenSheet(HubSheet.Dedupe);
-            actions.Children.Add(dedupe);
+            actions.Children.Add(ActionButton($"一键去重 {_store.DuplicateSkills.Count} 个…", () => OpenSheet(HubSheet.Dedupe)));
         }
 
-        var reveal = new Button { Content = "在资源管理器中显示" };
-        reveal.Click += (_, _) => _store.Reveal(document);
-        actions.Children.Add(reveal);
-        var archive = new Button { Content = "归档…" };
-        archive.IsEnabled = !skill.IsReadOnly;
-        archive.Click += (_, _) => _store.RequestArchive(document);
-        actions.Children.Add(archive);
-        var delete = new Button { Content = "删除实体…" };
-        delete.IsEnabled = !skill.IsReadOnly;
+        actions.Children.Add(ActionButton("在资源管理器中显示", () => _store.Reveal(document)));
+        actions.Children.Add(ActionButton("归档…", () => _store.RequestArchive(document), !skill.IsReadOnly));
+        var delete = new Button { Content = "删除实体…", Classes = { "destructive" }, IsEnabled = !skill.IsReadOnly };
         delete.Click += (_, _) => _store.RequestDelete(document);
         actions.Children.Add(delete);
-        InspectorPanel.Children.Add(Section("操作", actions));
+        InspectorPanel.Children.Add(FormSection("操作", actions));
 
         var related = _store.RelatedSkills(skill);
         if (related.Count > 0)
         {
-            var stack = new StackPanel { Spacing = 4 };
+            var stack = new StackPanel { Spacing = 2 };
             foreach (var other in related)
             {
-                var button = new Button { Content = other.Name };
-                button.Click += (_, _) => _store.Select(new DocumentRef.Skill(other));
-                stack.Children.Add(button);
+                stack.Children.Add(ActionButton(other.Name, () => _store.Select(new DocumentRef.Skill(other))));
             }
 
-            InspectorPanel.Children.Add(Section("相关", stack));
+            InspectorPanel.Children.Add(FormSection("相关", stack));
         }
     }
 
     void BuildPromptInspector(PromptItem prompt)
     {
         var document = new DocumentRef.Prompt(prompt);
-        InspectorPanel.Children.Add(InspectorHeader(prompt.Title, prompt.ParentSkillName ?? prompt.Source.Title(), [prompt.Source], _store.IsStarredPrompt(prompt.Id), () => _store.ToggleStar(document)));
-        InspectorPanel.Children.Add(Section("位置", PathRow("文件", prompt.CanonicalPath)));
+        InspectorPanel.Children.Add(FormSection(null, InspectorHeader(prompt.Title, prompt.ParentSkillName ?? prompt.Source.Title(), [prompt.Source], _store.IsStarredPrompt(prompt.Id), () => _store.ToggleStar(document))));
+        InspectorPanel.Children.Add(FormSection("位置", PathRow("文件", prompt.CanonicalPath)));
         AddMetaSections(document);
-        var actions = new StackPanel { Spacing = 6 };
+        var actions = new StackPanel { Spacing = 2 };
         if (prompt.Kind == PromptKind.Embedded)
         {
-            var save = new Button { Content = "另存到独立库" };
-            save.Click += (_, _) => _store.SavePromptAsStandalone(prompt);
-            actions.Children.Add(save);
+            actions.Children.Add(ActionButton("另存到独立库", () => _store.SavePromptAsStandalone(prompt)));
         }
 
-        var reveal = new Button { Content = "在资源管理器中显示" };
-        reveal.Click += (_, _) => _store.Reveal(document);
-        actions.Children.Add(reveal);
-        var archive = new Button { Content = "归档…" };
-        archive.IsEnabled = !prompt.IsReadOnly;
-        archive.Click += (_, _) => _store.RequestArchive(document);
-        actions.Children.Add(archive);
-        var delete = new Button { Content = "删除…" };
-        delete.IsEnabled = !prompt.IsReadOnly;
+        actions.Children.Add(ActionButton("在资源管理器中显示", () => _store.Reveal(document)));
+        actions.Children.Add(ActionButton("归档…", () => _store.RequestArchive(document), !prompt.IsReadOnly));
+        var delete = new Button { Content = "删除…", Classes = { "destructive" }, IsEnabled = !prompt.IsReadOnly };
         delete.Click += (_, _) => _store.RequestDelete(document);
         actions.Children.Add(delete);
-        InspectorPanel.Children.Add(Section("操作", actions));
+        InspectorPanel.Children.Add(FormSection("操作", actions));
     }
 
     void AddMetaSections(DocumentRef document)
     {
         var meta = _store.ItemMetaFor(document);
-        var tagBox = new TextBox { Text = string.Join(", ", meta.Tags), Watermark = "标签，逗号分隔" };
+        var tagBox = new TextBox { Text = string.Join(", ", meta.Tags), Watermark = "标签，逗号分隔", Classes = { "ghost" } };
         tagBox.LostFocus += (_, _) =>
             _store.SetTags((tagBox.Text ?? "").Split(',', StringSplitOptions.TrimEntries | StringSplitOptions.RemoveEmptyEntries), document);
-        var notes = new TextBox { Text = meta.Notes, AcceptsReturn = true, Height = 80, Watermark = "备注只存在 Skill Hub 里" };
+        var notes = new TextBox { Text = meta.Notes, AcceptsReturn = true, Height = 72, Watermark = "只保存在本机", Classes = { "ghost" } };
         notes.LostFocus += (_, _) => _store.SetNotes(notes.Text ?? "", document);
-        InspectorPanel.Children.Add(Section("标签与备注", tagBox, notes, new TextBlock
+        InspectorPanel.Children.Add(FormSection("标签", tagBox));
+        InspectorPanel.Children.Add(FormSection("备注", notes, new TextBlock
         {
-            Text = meta.OpenCount > 0 ? $"打开 {meta.OpenCount} 次" : "还没打开过",
+            Text = UsageScore.Caption(
+                document is DocumentRef.Skill skill ? _store.Usage.Skill(skill.Item).Count
+                    : document is DocumentRef.Prompt prompt ? _store.Usage.Prompt(prompt.Item).Count
+                    : 0,
+                meta.Starred,
+                document is DocumentRef.Skill s ? s.Item.LiveInstallCount : 1),
             Classes = { "caption" }
         }));
     }
 
     Control InspectorHeader(string title, string subtitle, IReadOnlyList<ToolSource> sources, bool starred, Action toggle)
     {
-        var star = new Button { Content = starred ? "★ 已收藏" : "☆ 收藏" };
+        var star = new Button { Classes = { "toolbar" }, HorizontalAlignment = HorizontalAlignment.Right };
+        star.Content = Glyph.Make("star", 14, starred ? Brushes.Gold : null);
         star.Click += (_, _) => toggle();
-        var badges = new StackPanel { Orientation = Orientation.Horizontal, Spacing = 6, Margin = new Thickness(0, 6, 0, 0) };
+        var top = new DockPanel();
+        DockPanel.SetDock(star, Dock.Right);
+        top.Children.Add(star);
+        top.Children.Add(new TextBlock { Text = title, FontSize = 20, FontWeight = FontWeight.Bold, TextWrapping = TextWrapping.Wrap });
+        var badges = new StackPanel { Orientation = Orientation.Horizontal, Spacing = 4 };
         foreach (var source in sources)
         {
             badges.Children.Add(Badge(source.Title(), ColorUtil.Tool(source), ColorUtil.Soft(source)));
         }
 
-        var stack = new StackPanel { Spacing = 4 };
-        stack.Children.Add(new TextBlock { Text = title, FontSize = 18, FontWeight = FontWeight.SemiBold, TextWrapping = TextWrapping.Wrap });
+        var stack = new StackPanel { Spacing = 8 };
+        stack.Children.Add(top);
         stack.Children.Add(new TextBlock { Text = subtitle, Classes = { "muted" }, TextWrapping = TextWrapping.Wrap });
         stack.Children.Add(badges);
-        stack.Children.Add(star);
         return stack;
     }
 
-    static Control Section(string title, params Control[] children)
+    static Control FormSection(string? title, params Control[] children)
     {
         var stack = new StackPanel { Spacing = 8 };
-        stack.Children.Add(new TextBlock { Text = title, FontWeight = FontWeight.SemiBold });
-        foreach (var child in children)
+        if (!string.IsNullOrEmpty(title))
         {
-            stack.Children.Add(child);
+            stack.Children.Add(new TextBlock { Text = title, Classes = { "section" } });
         }
 
-        return new Border { Classes = { "card" }, Child = stack };
+        var inner = new StackPanel { Spacing = 8 };
+        foreach (var child in children)
+        {
+            if (child is TextBlock { Text: "" })
+            {
+                continue;
+            }
+
+            inner.Children.Add(child);
+        }
+
+        stack.Children.Add(new Border { Classes = { "form" }, Child = inner });
+        return stack;
+    }
+
+    static Button ActionButton(string title, Action action, bool enabled = true)
+    {
+        var button = new Button { Content = title, Classes = { "action" }, IsEnabled = enabled };
+        button.Click += (_, _) => action();
+        return button;
     }
 
     static Control PathRow(string label, string path)
     {
-        var stack = new StackPanel();
+        var stack = new StackPanel { Spacing = 2 };
         stack.Children.Add(new TextBlock { Text = label, Classes = { "caption" } });
-        stack.Children.Add(new TextBlock { Text = path, TextWrapping = TextWrapping.Wrap });
+        stack.Children.Add(new SelectableTextBlock { Text = path, TextWrapping = TextWrapping.Wrap, FontSize = 12 });
         return stack;
     }
 
@@ -852,19 +983,21 @@ public partial class MainWindow : Window
         {
             Title = "出错了",
             Width = 420,
-            Height = 180,
+            SizeToContent = SizeToContent.Height,
             WindowStartupLocation = WindowStartupLocation.CenterOwner,
-            Content = new DockPanel
+            Content = new StackPanel
             {
                 Margin = new Thickness(20),
+                Spacing = 16,
                 Children =
                 {
-                    ButtonBar("好", () => { }),
                     new TextBlock { Text = _store.ErrorMessage ?? "", TextWrapping = TextWrapping.Wrap }
                 }
             }
         };
-        ((Button)((DockPanel)window.Content!).Children[0]).Click += (_, _) => window.Close();
+        var ok = new Button { Content = "好", HorizontalAlignment = HorizontalAlignment.Right };
+        ok.Click += (_, _) => window.Close();
+        ((StackPanel)window.Content!).Children.Add(ok);
         await window.ShowDialog(this);
         _store.DismissError();
     }
@@ -872,9 +1005,8 @@ public partial class MainWindow : Window
     async Task ShowConfirmAsync(ConfirmAction action)
     {
         var confirm = new Button { Content = action.ConfirmTitle };
-        var cancel = new Button { Content = "取消", Margin = new Thickness(8, 0, 0, 0) };
+        var cancel = new Button { Content = "取消" };
         var buttons = new StackPanel { Orientation = Orientation.Horizontal, HorizontalAlignment = HorizontalAlignment.Right, Spacing = 8 };
-        DockPanel.SetDock(buttons, Dock.Bottom);
         buttons.Children.Add(cancel);
         buttons.Children.Add(confirm);
         var window = new Window
@@ -883,13 +1015,14 @@ public partial class MainWindow : Window
             Width = 460,
             SizeToContent = SizeToContent.Height,
             WindowStartupLocation = WindowStartupLocation.CenterOwner,
-            Content = new DockPanel
+            Content = new StackPanel
             {
                 Margin = new Thickness(20),
+                Spacing = 16,
                 Children =
                 {
-                    buttons,
-                    new TextBlock { Text = action.Message, TextWrapping = TextWrapping.Wrap }
+                    new TextBlock { Text = action.Message, TextWrapping = TextWrapping.Wrap },
+                    buttons
                 }
             }
         };
@@ -904,13 +1037,5 @@ public partial class MainWindow : Window
             window.Close();
         };
         await window.ShowDialog(this);
-    }
-
-    static Button ButtonBar(string title, Action action)
-    {
-        var button = new Button { Content = title, HorizontalAlignment = HorizontalAlignment.Right };
-        DockPanel.SetDock(button, Dock.Bottom);
-        button.Click += (_, _) => action();
-        return button;
     }
 }

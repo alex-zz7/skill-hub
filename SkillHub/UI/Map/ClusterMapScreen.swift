@@ -18,7 +18,7 @@ struct ClusterMapScreen: View {
         .overlay(alignment: .bottom) {
             if showsHint {
                 Text(store.clusterPrefix == nil ? "点气泡打开一类或一项 · 点中心重新排列" : "继续点气泡往下，或点中心返回上一层")
-                    .font(.footnote)
+                    .font(Theme.hint)
                     .foregroundStyle(.secondary)
                     .padding(.bottom, 12)
             }

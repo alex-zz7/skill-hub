@@ -5,6 +5,7 @@ import os
 /// at `~/.skill-hub/meta.json`; the first load after upgrading copies that file across.
 nonisolated struct MetaStore: Sendable {
     let fileURL: URL
+    var usageCacheURL: URL { fileURL.deletingLastPathComponent().appending(path: "usage-cache.json") }
 
     static func inApplicationSupport() -> MetaStore {
         let base = FileManager.default.urls(for: .applicationSupportDirectory, in: .userDomainMask).first

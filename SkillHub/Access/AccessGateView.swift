@@ -53,8 +53,8 @@ private struct AccessFolderList: View {
         ("~/.cursor/skills", "Cursor"),
         ("~/.claude/skills", "Claude Code"),
         ("~/.codex/skills", "Codex"),
-        ("~/.agents/skills", "通用 Agent skills"),
-        ("~/.skill-hub", "Skill Hub 的 prompt 库和归档")
+        ("~/.agents/skills", String(localized: "通用 Agent skills")),
+        ("~/.skill-hub", String(localized: "Skill Hub 的 prompt 库和归档"))
     ]
 
     var body: some View {

@@ -34,7 +34,7 @@ struct NucleusView: View {
         .buttonStyle(BubbleButtonStyle())
         .animation(Theme.quick, value: count)
         .help(canGoUp ? "返回上一层" : "重新排列气泡")
-        .accessibilityLabel("\(title)，\(count) 个")
+        .accessibilityLabel(Text("\(title)，\(count) 个"))
         .accessibilityHint(canGoUp ? "返回上一层" : "重新排列气泡")
     }
 }

@@ -24,8 +24,41 @@ public class UsageAndMarkdownTests
     [Fact]
     public void CaptionSummarisesUsage()
     {
-        Assert.Equal("还没打开过", UsageScore.Caption(0, false, 1));
-        Assert.Equal("打开 2 次 · 已收藏 · 装在 3 处", UsageScore.Caption(2, true, 3));
+        Assert.Equal("还没被调用过", UsageScore.Caption(0, false, 1));
+        Assert.Equal("调用 2 次 · 已收藏 · 装在 3 处", UsageScore.Caption(2, true, 3));
+    }
+
+    [Fact]
+    public void CountsClaudeSkillTool()
+    {
+        var index = new UsageIndex();
+        UsageLog.IngestLine(
+            """{"type":"assistant","message":{"content":[{"type":"tool_use","name":"Skill","input":{"skill":"gptimage2"}}]},"timestamp":"2026-09-01T12:00:00Z"}""",
+            _now,
+            index);
+        Assert.Equal(1, index.Skills["gptimage2"].Count);
+    }
+
+    [Fact]
+    public void CountsCursorReadOfSkillFile()
+    {
+        var index = new UsageIndex();
+        UsageLog.IngestLine(
+            """{"message":{"content":[{"type":"tool_use","name":"Read","input":{"path":"/Users/alex/.claude/skills/geo-content/SKILL.md"}}]}}""",
+            _now,
+            index);
+        Assert.Equal(1, index.Skills["geo-content"].Count);
+    }
+
+    [Fact]
+    public void IgnoresGrepMentionsOfSkillFiles()
+    {
+        var index = new UsageIndex();
+        UsageLog.IngestLine(
+            """{"message":{"content":[{"type":"tool_use","name":"Grep","input":{"pattern":"SKILL.md","path":"/Users/alex/.claude/skills/geo-content/SKILL.md"}}]}}""",
+            _now,
+            index);
+        Assert.Empty(index.Skills);
     }
 
     [Fact]

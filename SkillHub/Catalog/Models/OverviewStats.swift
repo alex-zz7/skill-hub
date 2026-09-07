@@ -12,6 +12,7 @@ nonisolated struct OverviewStats: Sendable, Equatable {
     var healthCount = 0
     var missingDescriptions = 0
     var brokenLinks = 0
+    var sameNameSkills = 0
 
     static let empty = OverviewStats()
 
@@ -29,6 +30,7 @@ nonisolated struct OverviewStats: Sendable, Equatable {
             if !skill.health.isEmpty { healthCount += 1 }
             if skill.health.contains(.missingDescription) { missingDescriptions += 1 }
             if skill.health.contains(.brokenSymlink) { brokenLinks += 1 }
+            if skill.health.contains(.sameNameElsewhere) { sameNameSkills += 1 }
             for install in skill.installations {
                 byTool[install.source, default: 0] += 1
                 if install.isSymlink { symlinkInstalls += 1 } else { realInstalls += 1 }

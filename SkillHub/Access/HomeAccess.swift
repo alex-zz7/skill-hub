@@ -64,9 +64,10 @@ final class HomeAccess {
         panel.canCreateDirectories = false
         panel.showsHiddenFiles = true
         panel.directoryURL = expected
-        panel.title = "授权访问主目录"
-        panel.message = "Skill Hub 需要读写 \(expected.path) 下的 .cursor、.claude、.codex、.agents 等文件夹。已为你定位到主目录，直接点「授权」即可。"
-        panel.prompt = "授权"
+        let home = expected.path
+        panel.title = String(localized: "授权访问主目录")
+        panel.message = String(localized: "Skill Hub 需要读写 \(home) 下的 .cursor、.claude、.codex、.agents 等文件夹。已为你定位到主目录，直接点「授权」即可。")
+        panel.prompt = String(localized: "授权")
         guard panel.runModal() == .OK, let url = panel.url else { return }
         adopt(url)
     }
@@ -82,7 +83,7 @@ final class HomeAccess {
         let picked = url.resolvingSymlinksInPath().standardizedFileURL.path
         let expected = Self.realHome.resolvingSymlinksInPath().standardizedFileURL.path
         guard picked == expected else {
-            lastError = "需要选择你的用户主目录 \(expected)，而不是 \(picked)。"
+            lastError = String(localized: "需要选择你的用户主目录 \(expected)，而不是 \(picked)。")
             return
         }
         do {

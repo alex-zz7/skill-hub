@@ -3,7 +3,7 @@ import SwiftUI
 /// A monospaced path with a copy button; shows `~` for the home folder to keep rows short.
 struct PathRow: View {
     @Environment(CatalogStore.self) private var store
-    let label: String
+    let label: LocalizedStringKey
     let path: String
 
     @State private var copied = false
@@ -12,7 +12,7 @@ struct PathRow: View {
         LabeledContent {
             HStack(alignment: .top, spacing: 6) {
                 Text(abbreviated)
-                    .font(.system(.caption, design: .monospaced))
+                    .font(Theme.mono)
                     .textSelection(.enabled)
                     .multilineTextAlignment(.trailing)
                     .lineLimit(3)

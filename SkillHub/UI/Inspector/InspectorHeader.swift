@@ -22,7 +22,7 @@ struct InspectorHeader: View {
                         .help(starred ? "取消收藏" : "收藏")
                 }
                 Text(subtitle)
-                    .font(.callout)
+                    .font(Theme.body)
                     .foregroundStyle(.secondary)
                     .textSelection(.enabled)
                 HStack(spacing: 4) {
