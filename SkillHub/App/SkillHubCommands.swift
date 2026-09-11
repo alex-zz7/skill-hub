@@ -1,10 +1,19 @@
 import SwiftUI
 
 struct SkillHubCommands: Commands {
+    @Environment(\.openWindow) private var openWindow
+
     let store: CatalogStore
     let access: HomeAccess
 
     var body: some Commands {
+        CommandGroup(after: .windowArrangement) {
+            Button("显示主窗口") {
+                openWindow(id: SkillHubApp.mainWindowID)
+            }
+            .keyboardShortcut("0", modifiers: .command)
+        }
+
         CommandGroup(replacing: .newItem) {
             Button("新建 Skill…", action: newSkill)
                 .keyboardShortcut("n", modifiers: .command)

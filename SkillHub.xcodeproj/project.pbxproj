@@ -26,6 +26,7 @@
 		260C03B9B1FBD6D7765B5468 /* InstallationRow.swift in Sources */ = {isa = PBXBuildFile; fileRef = 03AD526C1EDFB8570A8FDD01 /* InstallationRow.swift */; };
 		2A662277C292CC317456DE08 /* MarkdownParserTests.swift in Sources */ = {isa = PBXBuildFile; fileRef = F838265225D0F23B2FA35B85 /* MarkdownParserTests.swift */; };
 		2C48E8DB5F0866B10C4F4853 /* RelatedSkillsSection.swift in Sources */ = {isa = PBXBuildFile; fileRef = FD43308CFBA4629E4C433143 /* RelatedSkillsSection.swift */; };
+		2C9EEB7874D0466519E19B2C /* AppDelegate.swift in Sources */ = {isa = PBXBuildFile; fileRef = 8758E92634144329596F4CA3 /* AppDelegate.swift */; };
 		2E5E24184BA318F8EA8FDD7B /* ClusterListView.swift in Sources */ = {isa = PBXBuildFile; fileRef = 3CCCFBA14E4942D5590C1929 /* ClusterListView.swift */; };
 		31C81A798704A588CB1D1038 /* CatalogStore.swift in Sources */ = {isa = PBXBuildFile; fileRef = CB5C206C8630181BA15D9054 /* CatalogStore.swift */; };
 		36AE5E397ECC7EDA6FA9B045 /* DocumentHeaderView.swift in Sources */ = {isa = PBXBuildFile; fileRef = 3CB5C16D40C6EEDDE131C0D6 /* DocumentHeaderView.swift */; };
@@ -119,6 +120,7 @@
 		FAB5083FE63A7E940EF2D336 /* ClusterRowView.swift in Sources */ = {isa = PBXBuildFile; fileRef = 6DBA5E9A4F341AC9D7378DA3 /* ClusterRowView.swift */; };
 		FAF80DF471CB473F0F7D1295 /* MarkdownParser.swift in Sources */ = {isa = PBXBuildFile; fileRef = 05C39F3F29119D7ABB1EFA06 /* MarkdownParser.swift */; };
 		FDE488ECE65BA5AFD2FEF3F8 /* Frontmatter.swift in Sources */ = {isa = PBXBuildFile; fileRef = F4D05E9E41296C6025692FA4 /* Frontmatter.swift */; };
+		FFA0C00E02884F245AF0106D /* AppDelegateTests.swift in Sources */ = {isa = PBXBuildFile; fileRef = BEA7696DB66FD18BC921143B /* AppDelegateTests.swift */; };
 /* End PBXBuildFile section */
 
 /* Begin PBXContainerItemProxy section */
@@ -191,6 +193,7 @@
 		80861570E9574646713305D1 /* ToolBadge.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ToolBadge.swift; sourceTree = "<group>"; };
 		82003FE3BAC633169CA264B4 /* SkillHub.app */ = {isa = PBXFileReference; explicitFileType = wrapper.application; includeInIndex = 0; path = SkillHub.app; sourceTree = BUILT_PRODUCTS_DIR; };
 		855EFD85FF5861E2DEE78D93 /* DocumentEditorView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = DocumentEditorView.swift; sourceTree = "<group>"; };
+		8758E92634144329596F4CA3 /* AppDelegate.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = AppDelegate.swift; sourceTree = "<group>"; };
 		8A2ED9B5D3E9BC2D2D6161E0 /* OverviewStats.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = OverviewStats.swift; sourceTree = "<group>"; };
 		8C5D8680C3F206AC33DBA227 /* BrowseEmptyState.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = BrowseEmptyState.swift; sourceTree = "<group>"; };
 		90DEAF3828D344E3A47EBA8D /* PrivacyInfo.xcprivacy */ = {isa = PBXFileReference; path = PrivacyInfo.xcprivacy; sourceTree = "<group>"; };
@@ -220,6 +223,7 @@
 		B9C2C8BFDFE78A85FF92C592 /* FrontmatterDocument.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = FrontmatterDocument.swift; sourceTree = "<group>"; };
 		BA4C869C3C32AC9AD1C1EF80 /* SkillInspectorView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = SkillInspectorView.swift; sourceTree = "<group>"; };
 		BD840ED052B896F998BC7524 /* Assets.xcassets */ = {isa = PBXFileReference; lastKnownFileType = folder.assetcatalog; path = Assets.xcassets; sourceTree = "<group>"; };
+		BEA7696DB66FD18BC921143B /* AppDelegateTests.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = AppDelegateTests.swift; sourceTree = "<group>"; };
 		BEE4CA9C1E99302B78A2FBC4 /* ItemMeta.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ItemMeta.swift; sourceTree = "<group>"; };
 		C013FCA76F6113DF6443D992 /* MarkdownBlockView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = MarkdownBlockView.swift; sourceTree = "<group>"; };
 		C7D96A2D288A7DADA0CA3A78 /* OverviewHealthBox.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = OverviewHealthBox.swift; sourceTree = "<group>"; };
@@ -318,6 +322,7 @@
 		45151218B9F8B5D3E40C402D /* App */ = {
 			isa = PBXGroup;
 			children = (
+				8758E92634144329596F4CA3 /* AppDelegate.swift */,
 				59D8699BF66B5CFA46D534C9 /* AppLanguage.swift */,
 				E3AD391D881C2886B804E7E0 /* SkillHubApp.swift */,
 				133140CEECCE1463A459990F /* SkillHubCommands.swift */,
@@ -387,6 +392,7 @@
 		769F725AFCF2FDD6D8085229 /* SkillHubTests */ = {
 			isa = PBXGroup;
 			children = (
+				BEA7696DB66FD18BC921143B /* AppDelegateTests.swift */,
 				03DD907B1AF534F7F58CD1AE /* ClusterGroupingTests.swift */,
 				7A4305138D8E0E732FE840C9 /* FrontmatterTests.swift */,
 				F838265225D0F23B2FA35B85 /* MarkdownParserTests.swift */,
@@ -640,6 +646,7 @@
 			isa = PBXSourcesBuildPhase;
 			buildActionMask = 2147483647;
 			files = (
+				FFA0C00E02884F245AF0106D /* AppDelegateTests.swift in Sources */,
 				9114ED3B212C33E037E216D1 /* ClusterGroupingTests.swift in Sources */,
 				6C1C2DF391132822A23B2754 /* FrontmatterTests.swift in Sources */,
 				2A662277C292CC317456DE08 /* MarkdownParserTests.swift in Sources */,
@@ -653,6 +660,7 @@
 			buildActionMask = 2147483647;
 			files = (
 				EBBE4B7E93A2CAC3CF56C8A2 /* AccessGateView.swift in Sources */,
+				2C9EEB7874D0466519E19B2C /* AppDelegate.swift in Sources */,
 				CEE99A6C26DD68BC91F372EA /* AppLanguage.swift in Sources */,
 				6DFAC14E63DFDF81044EF0FC /* AppMeta.swift in Sources */,
 				1B46F2A51AC7C7F2F299BF4E /* ArchiveRecord.swift in Sources */,
@@ -795,7 +803,7 @@
 				CODE_SIGN_ENTITLEMENTS = SkillHub/SkillHub.entitlements;
 				CODE_SIGN_IDENTITY = "Apple Development";
 				COMBINE_HIDPI_IMAGES = YES;
-				CURRENT_PROJECT_VERSION = 4;
+				CURRENT_PROJECT_VERSION = 5;
 				ENABLE_APP_SANDBOX = YES;
 				ENABLE_HARDENED_RUNTIME = YES;
 				INFOPLIST_FILE = SkillHub/Info.plist;
@@ -978,7 +986,7 @@
 				CODE_SIGN_ENTITLEMENTS = SkillHub/SkillHub.entitlements;
 				CODE_SIGN_IDENTITY = "Apple Development";
 				COMBINE_HIDPI_IMAGES = YES;
-				CURRENT_PROJECT_VERSION = 4;
+				CURRENT_PROJECT_VERSION = 5;
 				ENABLE_APP_SANDBOX = YES;
 				ENABLE_HARDENED_RUNTIME = YES;
 				INFOPLIST_FILE = SkillHub/Info.plist;

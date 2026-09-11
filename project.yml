@@ -39,7 +39,7 @@ targets:
         PRODUCT_NAME: Skill Hub
         PRODUCT_MODULE_NAME: SkillHub
         MARKETING_VERSION: "1.0.0"
-        CURRENT_PROJECT_VERSION: "4"
+        CURRENT_PROJECT_VERSION: "5"
         INFOPLIST_FILE: SkillHub/Info.plist
         CODE_SIGN_ENTITLEMENTS: SkillHub/SkillHub.entitlements
         CODE_SIGN_IDENTITY: "Apple Development"
